@@ -362,11 +362,7 @@ namespace SoulsFormats
                         {
                             //AddUV(new Vector3(br.ReadInt16(), br.ReadInt16(), br.ReadInt16()) / uvFactor);
                             AddUV(ReadFloat16NormXYZ(br));
-                            br.ReadInt16();
-                        }
-                        else if (member.Type == LayoutType.Unk2D)
-                        {
-                            AddUV(new Vector3(br.ReadInt16(), br.ReadInt16(), 0) / uvFactor);
+                            br.AssertInt16(0);
                         }
                         else
                             throw new NotImplementedException($"Read not implemented for {member.Type} {member.Semantic}.");

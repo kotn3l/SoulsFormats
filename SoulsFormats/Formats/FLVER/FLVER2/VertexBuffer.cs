@@ -44,7 +44,7 @@ namespace SoulsFormats
             {
                 BufferLayout layout = layouts[LayoutIndex];
                 if (VertexSize != layout.Size)
-                    throw new InvalidDataException($"Mismatched vertex buffer ({VertexSize}) and buffer layout ({layout.Size}) sizes.");
+                    throw new InvalidDataException($"Mismatched vertex buffer and buffer layout sizes.");
 
                 br.StepIn(dataOffset + BufferOffset);
                 {

@@ -147,7 +147,7 @@ namespace SoulsFormats
             /// <summary>
             /// The raw data of the texture.
             /// </summary>
-            public byte[] Bytes { get; set; }
+            public Memory<byte> Bytes { get; set; }
 
             /// <summary>
             /// Extended metadata present in headerless console TPF textures.
@@ -196,7 +196,7 @@ namespace SoulsFormats
                 Format = br.ReadByte();
                 Type = br.ReadEnum8<TexType>();
                 Mipmaps = br.ReadByte();
-                Flags1 = br.AssertByte(0, 1, 2, 3, 128);
+                Flags1 = br.AssertByte(0, 1, 2, 3);
 
                 if (platform != TPFPlatform.PC)
                 {
@@ -216,20 +216,15 @@ namespace SoulsFormats
                     }
                     else if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
                     {
-                        Header.TextureCount = br.ReadInt32(); //can be basically anything bc of Volume
-                        Header.Unk2 = br.AssertInt32(0xD, 0x8);
-                    }
-                    else if (platform == TPFPlatform.PS5)
-                    {
-                        Header.TextureCount = br.ReadInt32();
-                        Header.Unk2 = br.AssertInt32(0x9);
+                        Header.TextureCount = br.AssertInt32(1, 6);
+                        Header.Unk2 = br.AssertInt32(0xD);
                     }
                 }
 
                 uint nameOffset = br.ReadUInt32();
                 bool hasFloatStruct = br.AssertInt32(0, 1) == 1;
 
-                if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone || platform == TPFPlatform.PS5)
+                if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
                     Header.DXGIFormat = br.ReadInt32();
 
                 if (hasFloatStruct)
@@ -286,7 +281,7 @@ namespace SoulsFormats
                         if (flag2 != 0)
                             bw.WriteInt32(Header.Unk2);
                     }
-                    else if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone || platform == TPFPlatform.PS5)
+                    else if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
                     {
                         bw.WriteInt32(Header.TextureCount);
                         bw.WriteInt32(Header.Unk2);
@@ -296,7 +291,7 @@ namespace SoulsFormats
                 bw.ReserveUInt32($"FileName{index}");
                 bw.WriteInt32(FloatStruct == null ? 0 : 1);
 
-                if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone || platform == TPFPlatform.PS5)
+                if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
                     bw.WriteInt32(Header.DXGIFormat);
 
                 if (FloatStruct != null)
@@ -316,18 +311,18 @@ namespace SoulsFormats
             {
                 bw.FillUInt32($"FileData{index}", (uint)bw.Position);
 
-                byte[] bytes = Bytes;
+                Memory<byte> bytes = Bytes;
                 if (Flags1 == 2 || Flags1 == 3)
-                    bytes = DCX.Compress(bytes, DCX.Type.DCP_EDGE);
+                    bytes = DCX.Compress(bytes.Span, DCX.Type.DCP_EDGE);
 
                 bw.FillInt32($"FileSize{index}", bytes.Length);
-                bw.WriteBytes(bytes);
+                bw.WriteBytes(bytes.Span);
             }
 
             /// <summary>
             /// Attempt to create a full DDS file from headerless console textures. Very very very poor support at the moment.
             /// </summary>
-            public byte[] Headerize()
+            public Memory<byte> Headerize()
             {
                 return Headerizer.Headerize(this);
             }
@@ -370,11 +365,6 @@ namespace SoulsFormats
             /// Headerless DDS with DX10 metadata.
             /// </summary>
             Xbone = 5,
-
-            /// <summary>
-            /// New PS5 DDS texture format.
-            /// </summary>
-            PS5 = 8,
         }
 
         /// <summary>

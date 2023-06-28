@@ -73,7 +73,7 @@ namespace SoulsFormats
             br.Position = 0;
 
             // Make a private copy of the file to read row data from later
-            byte[] copy = br.GetBytes(0, (int)br.Stream.Length);
+            byte[] copy = br.GetBytes(0, (int)br.Length);
             RowReader = new BinaryReaderEx(BigEndian, copy);
 
             // The strings offset in the header is highly unreliable; only use it as a last resort
@@ -202,11 +202,20 @@ namespace SoulsFormats
                 bw.FillInt64("ParamTypeOffset", bw.Position);
                 bw.WriteASCII(ParamType, true);
             }
-
+            
+            StringOffsetDictionary = new Dictionary<string, long>() 
+            {
+                {"", bw.Position}
+            };
+            bw.WriteInt16(0); // null string
+            
             for (int i = 0; i < Rows.Count; i++)
                 Rows[i].WriteName(bw, this, i);
             // DeS and BB sometimes (but not always) include some useless padding here
+            bw.WriteInt16(0); // useless padding at the end
         }
+        
+        public Dictionary<string, long> StringOffsetDictionary;
 
         /// <summary>
         /// Interprets row data according to the given paramdef and stores it for later writing.

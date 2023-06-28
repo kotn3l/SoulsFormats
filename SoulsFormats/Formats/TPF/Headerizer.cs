@@ -97,9 +97,9 @@ namespace SoulsFormats
 
         private static byte[] DX10Formats = { 6, 100, 102, 106, 107, 112, 113 };
 
-        public static byte[] Headerize(TPF.Texture texture)
+        public static Memory<byte> Headerize(TPF.Texture texture)
         {
-            if (SFEncoding.ASCII.GetString(texture.Bytes, 0, 4) == "DDS ")
+            if (SFEncoding.ASCII.GetString(texture.Bytes.Span[..4].ToArray(), 0, 4) == "DDS ")
                 return texture.Bytes;
 
             var dds = new DDS();
@@ -109,9 +109,7 @@ namespace SoulsFormats
             int mipCount = texture.Mipmaps;
             TPF.TexType type = texture.Type;
 
-            dds.dwFlags = DDSD.CAPS | DDSD.HEIGHT | DDSD.WIDTH | DDSD.PIXELFORMAT;
-            if (mipCount > 1)
-                dds.dwFlags |= DDSD.MIPMAPCOUNT;
+            dds.dwFlags = DDSD.CAPS | DDSD.HEIGHT | DDSD.WIDTH | DDSD.PIXELFORMAT | DDSD.MIPMAPCOUNT;
             if (CompressedBPB.ContainsKey(format))
                 dds.dwFlags |= DDSD.LINEARSIZE;
             else if (UncompressedBPP.ContainsKey(format))
@@ -121,18 +119,12 @@ namespace SoulsFormats
             dds.dwWidth = width;
 
             if (CompressedBPB.ContainsKey(format))
-                if (format == 102)
-                    dds.dwPitchOrLinearSize = Math.Max(1, (width + 3) / 4) * Math.Max(1, (width + 3) / 4) * CompressedBPB[format];
-                else if (format == 0)
-                    dds.dwPitchOrLinearSize = (Math.Max(1, (width + 3) / 4) * Math.Max(1, (width + 3) / 4) * CompressedBPB[format]) / 2;
-                else
-                    dds.dwPitchOrLinearSize = Math.Max(1, (width + 3) / 4) * CompressedBPB[format];
+                dds.dwPitchOrLinearSize = Math.Max(1, (width + 3) / 4) * CompressedBPB[format];
             else if (UncompressedBPP.ContainsKey(format))
                 dds.dwPitchOrLinearSize = (width * UncompressedBPP[format] + 7) / 8;
 
-            if (format == 102 || format == 0)
-                dds.dwDepth = 1;
-            else dds.dwDepth = 0;
+            // This line serves only to remind me that I didn't forget about dwDepth, I left it 0 on purpose.
+            dds.dwDepth = 0;
 
             if (mipCount == 0)
                 mipCount = DetermineMipCount(width, height);
@@ -214,8 +206,8 @@ namespace SoulsFormats
                     dds.header10.miscFlag = RESOURCE_MISC.TEXTURECUBE;
             }
 
-            byte[] bytes = RebuildPixelData(texture.Bytes, format, width, height, mipCount, type);
-            return dds.Write(bytes);
+            var bytes = RebuildPixelData(texture.Bytes, format, width, height, mipCount, type);
+            return dds.Write(bytes.Span);
         }
 
         private static int DetermineMipCount(int width, int height)
@@ -223,31 +215,29 @@ namespace SoulsFormats
             return (int)Math.Ceiling(Math.Log(Math.Max(width, height), 2)) + 1;
         }
 
-        private static byte[] RebuildPixelData(byte[] bytes, byte format, short width, short height, int mipCount, TPF.TexType type)
+        private static Memory<byte> RebuildPixelData(Memory<byte> bytes, byte format, short width, short height, int mipCount, TPF.TexType type)
         {
             int imageCount = type == TPF.TexType.Cubemap ? 6 : 1;
             int padDimensions = 1;
-            if (format == 102 || format == 0 || format == 108 || format == 103)
+            if (format == 102)
                 padDimensions = 32;
 
             List<Image> images;
-            if (CompressedBPB.ContainsKey(format))
-                images = Image.ReadCompressed(bytes, width, height, padDimensions, imageCount, mipCount, 0x80, CompressedBPB[format]);
-            else if (UncompressedBPP.ContainsKey(format))
-                images = Image.ReadUncompressed(bytes, width, height, padDimensions, imageCount, mipCount, 0x80, UncompressedBPP[format]);
+            if (CompressedBPB.TryGetValue(format, out var value))
+                images = Image.ReadCompressed(bytes, width, height, padDimensions, imageCount, mipCount, 0x80, value);
+            else if (UncompressedBPP.TryGetValue(format, out var value1))
+                images = Image.ReadUncompressed(bytes, width, height, padDimensions, imageCount, mipCount, 0x80, value1);
             else
                 throw new NotSupportedException($"Cannot decompose format {format}.");
 
-            if (format == 10 || format == 102 || format == 0 || format == 108 || format == 103) // || format == 0
+            if (format == 10 || format == 102)
             {
                 int texelSize = -1;
                 if (format == 10)
                     texelSize = 4;
-                else if (format == 0 || format == 108 || format == 103)
-                    texelSize = 8;
                 else if (format == 102)
                     texelSize = 16;
-                
+
                 foreach (Image image in images)
                 {
                     for (int i = 0; i < image.MipLevels.Count; i++)
@@ -268,23 +258,10 @@ namespace SoulsFormats
 
         private static byte[] DeswizzleMipLevel(byte[] swizzled, byte format, int texelSize, int width, int height, int padDimensions)
         {
-            int paddedWidth;
-            int paddedHeight;
-            int texelWidth;
-            if (format == 105)
-            {
-                paddedWidth = width;
-                paddedHeight = height;
-                texelWidth = paddedWidth;
-            }
-            else
-            {
-                paddedWidth = PadTo(width, padDimensions);
-                paddedHeight = PadTo(height, padDimensions);
-                texelWidth = paddedWidth;
-            }
-
-            if (format == 102 || format == 108 || format == 0 || format == 103)
+            int paddedWidth = PadTo(width, padDimensions);
+            int paddedHeight = PadTo(height, padDimensions);
+            int texelWidth = paddedWidth;
+            if (format == 102)
                 texelWidth = paddedWidth / 4;
 
             byte[] unswizzled;
@@ -299,7 +276,7 @@ namespace SoulsFormats
                 }
                 unswizzled = trimmed;
             }
-            else if (format == 102 || format == 0 || format == 108 || format == 103)
+            else if (format == 102)
             {
                 unswizzled = DeswizzlePS4(swizzled, format, texelSize, paddedWidth, paddedHeight);
                 byte[] trimmed = new byte[(int)Math.Max(1, width / 4f) * (int)Math.Max(1, height / 4f) * texelSize];
@@ -346,22 +323,9 @@ namespace SoulsFormats
         {
             byte[] unswizzled = new byte[swizzled.Length];
 
-            int blocksH;
-            int blocksV ;
-            int swizzleBlockSize;
-
-            if (format == 105)
-            {
-                blocksH = (width + 15) / 16;
-                blocksV = (height + 15) / 16;
-                swizzleBlockSize = 16;
-            }
-            else
-            {
-                blocksH = (width + 31) / 32;
-                blocksV = (height + 31) / 32;
-                swizzleBlockSize = 32;
-            }
+            int blocksH = (width + 31) / 32;
+            int blocksV = (height + 31) / 32;
+            int swizzleBlockSize = 32;
 
             int readOffset = 0;
             int h;
@@ -375,17 +339,7 @@ namespace SoulsFormats
                     DeswizzlePS4Block(swizzled, unswizzled, ref readOffset, width, texelSize, 32, 32, writeOffset, 2);
                     h += swizzleBlockSize / 4 * texelSize;
                 }
-                if (format == 105)
-                {
-                    v += swizzleBlockSize * swizzleBlockSize;
-                }
-                else
-                {
-                    if (texelSize == 8)
-                        v += swizzleBlockSize * width / 2;
-                    else
-                        v += swizzleBlockSize * width;
-                }
+                v += swizzleBlockSize * width;
             }
 
             return unswizzled;
@@ -433,7 +387,7 @@ namespace SoulsFormats
                 return bw.FinishBytes();
             }
 
-            public static List<Image> ReadUncompressed(byte[] bytes, int width, int height, int padDimensions, int imageCount, int mipCount, int padBetween, int bytesPerPixel)
+            public static List<Image> ReadUncompressed(Memory<byte> bytes, int width, int height, int padDimensions, int imageCount, int mipCount, int padBetween, int bytesPerPixel)
             {
                 var images = new List<Image>(imageCount);
                 var br = new BinaryReaderEx(false, bytes);
@@ -453,7 +407,7 @@ namespace SoulsFormats
                 return images;
             }
 
-            public static List<Image> ReadCompressed(byte[] bytes, int width, int height, int padDimensions, int imageCount, int mipCount, int padBetween, int bytesPerBlock)
+            public static List<Image> ReadCompressed(Memory<byte> bytes, int width, int height, int padDimensions, int imageCount, int mipCount, int padBetween, int bytesPerBlock)
             {
                 var images = new List<Image>(imageCount);
                 var br = new BinaryReaderEx(false, bytes);

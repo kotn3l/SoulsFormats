@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.IO;
+using System.IO.MemoryMappedFiles;
+using DotNext.IO.MemoryMappedFiles;
 
 namespace SoulsFormats
 {
@@ -74,7 +76,7 @@ namespace SoulsFormats
         /// <summary>
         /// Creates a FLVER with a preset cache
         /// </summary>
-        public static FLVER2 Read(byte[] bytes, FlverCache cache)
+        public static FLVER2 Read(Memory<byte> bytes, FlverCache cache)
         {
             BinaryReaderEx br = new BinaryReaderEx(false, bytes);
             FLVER2 file = new FLVER2();
@@ -91,17 +93,16 @@ namespace SoulsFormats
         /// </summary>
         public static FLVER2 Read(string path, FlverCache cache)
         {
-            using (FileStream stream = File.OpenRead(path))
-            {
-                BinaryReaderEx br = new BinaryReaderEx(false, stream);
-                FLVER2 file = new FLVER2();
-                file.Cache = cache;
-                DCX.Type ctype;
-                br = SFUtil.GetDecompressedBR(br, out ctype);
-                file.Compression = ctype;
-                file.Read(br);
-                return file;
-            }
+            using var file = MemoryMappedFile.CreateFromFile(path, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
+            using var accessor = file.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
+            BinaryReaderEx br = new BinaryReaderEx(false, accessor.Memory);
+            FLVER2 ret = new FLVER2();
+            ret.Cache = cache;
+            DCX.Type ctype;
+            br = SFUtil.GetDecompressedBR(br, out ctype);
+            ret.Compression = ctype;
+            ret.Read(br);
+            return ret;
         }
 
         /// <summary>
@@ -179,9 +180,7 @@ namespace SoulsFormats
 
             br.AssertInt32(0);
             br.AssertInt32(0);
-            Header.Unk68 = br.AssertInt16(0, 1, 2, 3, 4, 5);
-            Header.Unk6B = (char)br.ReadInt16();
-
+            Header.Unk68 = br.AssertInt32(0, 1, 2, 3, 4);
             br.AssertInt32(0);
             br.AssertInt32(0);
             br.AssertInt32(0);
@@ -216,7 +215,7 @@ namespace SoulsFormats
 
             BufferLayouts = new List<BufferLayout>(bufferLayoutCount);
             for (int i = 0; i < bufferLayoutCount; i++)
-                BufferLayouts.Add(new BufferLayout(br, Header));
+                BufferLayouts.Add(new BufferLayout(br));
 
             var textures = new List<Texture>(textureCount);
             for (int i = 0; i < textureCount; i++)
@@ -311,8 +310,7 @@ namespace SoulsFormats
 
             bw.WriteInt32(0);
             bw.WriteInt32(0);
-            bw.WriteInt16(Header.Unk68);
-            bw.WriteInt16((short)Header.Unk6B);
+            bw.WriteInt32(Header.Unk68);
             bw.WriteInt32(0);
             bw.WriteInt32(0);
             bw.WriteInt32(0);

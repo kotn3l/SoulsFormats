@@ -1187,53 +1187,6 @@ namespace SoulsFormats
                     obj.Unk1 = Unk1.DeepCopy();
                 }
 
-                public static Object fromDummy(DummyObject doo)
-                {
-                    Object obj = new Object();
-                    obj.AnimID = doo.AnimID;
-                    obj.BreakTerm = doo.BreakTerm;
-                    obj.DisablePointLightEffect = doo.DisablePointLightEffect;
-                    obj.DrawByReflectCam = doo.DrawByReflectCam;
-                    obj.DrawOnlyReflectCam = doo.DrawOnlyReflectCam;
-                    obj.EnableOnAboveShadow = doo.EnableOnAboveShadow;
-                    obj.EntityGroupIDs = doo.EntityGroupIDs;
-                    obj.EntityID = doo.EntityID;
-                    obj.Gparam = doo.Gparam;
-                    obj.IsCascade3ShadowSrc = doo.IsCascade3ShadowSrc;
-                    obj.IsPointLightShadowSrc = doo.IsPointLightShadowSrc;
-                    obj.IsShadowDest = doo.IsShadowDest;
-                    obj.IsShadowOnly = doo.IsShadowOnly;
-                    obj.IsShadowSrc = doo.IsShadowSrc;
-                    obj.IsStaticShadowSrc = doo.IsStaticShadowSrc;
-                    obj.LanternID = doo.LanternID;
-                    obj.LodParamID = doo.LodParamID;
-                    obj.ModelName = doo.ModelName;
-                    obj.Name = doo.Name;
-                    obj.NetSyncType = doo.NetSyncType;
-                    obj.ObjPartName1 = doo.ObjPartName1;
-                    obj.ObjPartName2 = doo.ObjPartName2;
-                    obj.ObjPartName3 = doo.ObjPartName3;
-                    obj.Position = doo.Position;
-                    obj.Rotation = doo.Rotation;
-                    obj.Scale = doo.Scale;
-                    obj.SetMainObjStructureBooleans = doo.SetMainObjStructureBooleans;
-                    obj.SibPath = doo.SibPath;
-                    obj.UnkE04 = doo.UnkE04;
-                    obj.UnkE05 = doo.UnkE05;
-                    obj.UnkE06 = doo.UnkE06;
-                    obj.UnkE09 = doo.UnkE09;
-                    obj.UnkE0B = doo.UnkE0B;
-                    obj.UnkE0F = doo.UnkE0F;
-                    obj.UnkE10 = doo.UnkE10;
-                    obj.UnkE17 = doo.UnkE17;
-                    obj.UnkE18 = doo.UnkE18;
-                    obj.UnkE3C = doo.UnkE3C;
-                    obj.UnkE40 = doo.UnkE40;
-                    obj.UnkT0E = doo.UnkT0E;
-                    obj.UnkT18 = doo.UnkT18;
-                    obj.UnkT1A = doo.UnkT1A;
-                    return obj;
-                }
                 internal Object(BinaryReaderEx br) : base(br) { }
 
                 private protected override void ReadUnk1(BinaryReaderEx br) => Unk1 = new UnkStruct1(br);
@@ -1294,9 +1247,9 @@ namespace SoulsFormats
                 public short PatrolIndex { get; set; }
 
                 /// <summary>
-                /// Unknown.
+                /// Enum that refers to an animation ID to use.
                 /// </summary>
-                public short UnkT22 { get; set; }
+                public short InitAnimIDType { get; set; }
 
                 /// <summary>
                 /// Unknown.
@@ -1374,7 +1327,7 @@ namespace SoulsFormats
                     CharaInitID = br.ReadInt32();
                     CollisionPartIndex = br.ReadInt32();
                     PatrolIndex = br.ReadInt16();
-                    UnkT22 = br.ReadInt16();
+                    InitAnimIDType = br.ReadInt16();
                     UnkT24 = br.ReadInt32();
                     br.AssertPattern(0x10, 0xFF);
                     BackupEventAnimID = br.ReadInt32();
@@ -1415,7 +1368,7 @@ namespace SoulsFormats
                     bw.WriteInt32(CharaInitID);
                     bw.WriteInt32(CollisionPartIndex);
                     bw.WriteInt16(PatrolIndex);
-                    bw.WriteInt16(UnkT22);
+                    bw.WriteInt16(InitAnimIDType);
                     bw.WriteInt32(UnkT24);
                     bw.WritePattern(0x10, 0xFF);
                     bw.WriteInt32(BackupEventAnimID);
@@ -1483,63 +1436,6 @@ namespace SoulsFormats
                     base.DeepCopyTo(part);
                     var enemy = (Enemy)part;
                     enemy.Unk1 = Unk1.DeepCopy();
-                }
-
-                public static Enemy fromDummy(DummyEnemy de)
-                {
-                    MSBS.Part.Enemy enemy = new MSBS.Part.Enemy();
-                    enemy.Name = de.Name;
-                    enemy.BackupEventAnimID = de.BackupEventAnimID;
-                    enemy.CharaInitID = de.CharaInitID;
-                    enemy.CollisionPartName = de.CollisionPartName;
-                    enemy.DisablePointLightEffect = de.DisablePointLightEffect;
-                    enemy.DrawByReflectCam = de.DrawByReflectCam;
-                    enemy.DrawOnlyReflectCam = de.DrawOnlyReflectCam;
-                    enemy.EnableOnAboveShadow = de.EnableOnAboveShadow;
-                    enemy.EntityGroupIDs = de.EntityGroupIDs;
-                    enemy.EntityID = de.EntityID;
-                    enemy.EventFlagCompareState = de.EventFlagCompareState;
-                    enemy.EventFlagID = de.EventFlagID;
-                    enemy.Gparam = de.Gparam;
-                    enemy.IsCascade3ShadowSrc = de.IsCascade3ShadowSrc;
-                    enemy.IsPointLightShadowSrc = de.IsPointLightShadowSrc;
-                    enemy.IsShadowDest = de.IsShadowDest;
-                    enemy.IsShadowOnly = de.IsShadowOnly;
-                    enemy.IsShadowSrc = de.IsShadowSrc;
-                    enemy.IsStaticShadowSrc = de.IsStaticShadowSrc;
-                    enemy.LanternID = de.LanternID;
-                    enemy.LodParamID = de.LodParamID;
-                    enemy.ModelIndex = de.ModelIndex;
-                    enemy.ModelName = de.ModelName;
-                    enemy.NPCParamID = de.NPCParamID;
-                    enemy.PatrolIndex = de.PatrolIndex;
-                    enemy.PlatoonID = de.PlatoonID;
-                    enemy.Position = de.Position;
-                    enemy.Rotation = de.Rotation;
-                    enemy.Scale = de.Rotation;
-                    enemy.SibPath = de.SibPath;
-                    enemy.ThinkParamID = de.ThinkParamID;
-                    enemy.UnkE04 = de.UnkE04;
-                    enemy.UnkE05 = de.UnkE05;
-                    enemy.UnkE06 = de.UnkE06;
-                    enemy.UnkE09 = de.UnkE09;
-                    enemy.UnkE0B = de.UnkE0B;
-                    enemy.UnkE0F = de.UnkE0F;
-                    enemy.UnkE10 = de.UnkE10;
-                    enemy.UnkE17 = de.UnkE17;
-                    enemy.UnkE18 = de.UnkE18;
-                    enemy.UnkE3C = de.UnkE3C;
-                    enemy.UnkE40 = de.UnkE40;
-                    enemy.UnkT10 = de.UnkT10;
-                    enemy.UnkT10 = de.UnkT10;
-                    enemy.UnkT22 = de.UnkT22;
-                    enemy.UnkT24 = de.UnkT24;
-                    enemy.UnkT48 = de.UnkT48;
-                    enemy.UnkT4C = de.UnkT4C;
-                    enemy.UnkT50 = de.UnkT50;
-                    enemy.UnkT78 = de.UnkT78;
-                    enemy.UnkT84 = de.UnkT84;
-                    return enemy;
                 }
 
                 internal Enemy(BinaryReaderEx br) : base(br) { }

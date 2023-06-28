@@ -171,9 +171,9 @@ namespace SoulsFormats
             private int ModelIndex;
 
             /// <summary>
-            /// Unknown
+            /// Involved with serialization.
             /// </summary>
-            public int Unk08 { get; set; }
+            public int InstanceID { get; set; }
 
             /// <summary>
             /// A path to a .sib file, presumably some kind of editor placeholder.
@@ -203,12 +203,12 @@ namespace SoulsFormats
             /// <summary>
             /// Very speculative
             /// </summary>
-            public int MapStudioLayer { get; set; }
+            public uint MapStudioLayer { get; set; }
 
             /// <summary>
             /// Identifies the part in event scripts.
             /// </summary>
-            public int EntityID { get; set; }
+            public uint EntityID { get; set; }
 
             /// <summary>
             /// Unknown.
@@ -303,7 +303,7 @@ namespace SoulsFormats
             /// <summary>
             /// Allows multiple parts to be identified by the same entity ID.
             /// </summary>
-            public int[] EntityGroupIDs { get; private set; }
+            public uint[] EntityGroupIDs { get; private set; }
 
             /// <summary>
             /// Unknown.
@@ -320,10 +320,8 @@ namespace SoulsFormats
                 Name = name;
                 SibPath = "";
                 Scale = Vector3.One;
-                EntityID = -1;
-                EntityGroupIDs = new int[8];
-                for (int i = 0; i < 8; i++)
-                    EntityGroupIDs[i] = -1;
+                EntityID = 0;
+                EntityGroupIDs = new uint[8];
             }
 
             /// <summary>
@@ -332,7 +330,7 @@ namespace SoulsFormats
             public Part DeepCopy()
             {
                 var part = (Part)MemberwiseClone();
-                part.EntityGroupIDs = (int[])EntityGroupIDs.Clone();
+                part.EntityGroupIDs = (uint[])EntityGroupIDs.Clone();
                 DeepCopyTo(part);
                 return part;
             }
@@ -344,7 +342,7 @@ namespace SoulsFormats
             {
                 long start = br.Position;
                 long nameOffset = br.ReadInt64();
-                Unk08 = br.ReadInt32();
+                InstanceID = br.ReadInt32();
                 br.AssertUInt32((uint)Type);
                 br.ReadInt32(); // ID
                 ModelIndex = br.ReadInt32();
@@ -353,7 +351,7 @@ namespace SoulsFormats
                 Rotation = br.ReadVector3();
                 Scale = br.ReadVector3();
                 Unk44 = br.ReadInt32();
-                MapStudioLayer = br.ReadInt32();
+                MapStudioLayer = br.ReadUInt32();
                 br.AssertInt32(0);
                 long unkOffset1 = br.ReadInt64();
                 long unkOffset2 = br.ReadInt64();
@@ -466,7 +464,7 @@ namespace SoulsFormats
 
             private void ReadEntityData(BinaryReaderEx br)
             {
-                EntityID = br.ReadInt32();
+                EntityID = br.ReadUInt32();
                 UnkE04 = br.ReadByte();
                 br.AssertByte(0);
                 br.AssertByte(0);
@@ -488,7 +486,7 @@ namespace SoulsFormats
                 DisablePointLightEffect = br.ReadBoolean();
                 UnkE17 = br.ReadByte();
                 UnkE18 = br.ReadInt32();
-                EntityGroupIDs = br.ReadInt32s(8);
+                EntityGroupIDs = br.ReadUInt32s(8);
                 UnkE3C = br.ReadInt16();
                 UnkE3E = br.ReadInt16();
                 //br.AssertPattern(0x10, 0x00);
@@ -527,7 +525,7 @@ namespace SoulsFormats
             {
                 long start = bw.Position;
                 bw.ReserveInt64("NameOffset");
-                bw.WriteInt32(Unk08);
+                bw.WriteInt32(InstanceID);
                 bw.WriteUInt32((uint)Type);
                 bw.WriteInt32(id);
                 bw.WriteInt32(ModelIndex);
@@ -536,7 +534,7 @@ namespace SoulsFormats
                 bw.WriteVector3(Rotation);
                 bw.WriteVector3(Scale);
                 bw.WriteInt32(Unk44);
-                bw.WriteInt32(MapStudioLayer);
+                bw.WriteUInt32(MapStudioLayer);
                 bw.WriteInt32(0);
                 bw.ReserveInt64("UnkOffset1");
                 bw.ReserveInt64("UnkOffset2");
@@ -659,7 +657,7 @@ namespace SoulsFormats
 
             private void WriteEntityData(BinaryWriterEx bw)
             {
-                bw.WriteInt32(EntityID);
+                bw.WriteUInt32(EntityID);
                 bw.WriteByte(UnkE04);
                 bw.WriteByte(0);
                 bw.WriteByte(0);
@@ -681,7 +679,7 @@ namespace SoulsFormats
                 bw.WriteBoolean(DisablePointLightEffect);
                 bw.WriteByte(UnkE17);
                 bw.WriteInt32(UnkE18);
-                bw.WriteInt32s(EntityGroupIDs);
+                bw.WriteUInt32s(EntityGroupIDs);
                 bw.WriteInt16(UnkE3C);
                 bw.WriteInt16(UnkE3E);
                 //bw.WritePattern(0x10, 0x00);
@@ -853,7 +851,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown.
                 /// </summary>
-                public int[] DispGroups { get; private set; }
+                public uint[] DispGroups { get; private set; }
 
                 /// <summary>
                 /// Unknown.
@@ -870,7 +868,7 @@ namespace SoulsFormats
                 /// </summary>
                 public UnkStruct2()
                 {
-                    DispGroups = new int[8];
+                    DispGroups = new uint[8];
                 }
 
                 /// <summary>
@@ -879,14 +877,14 @@ namespace SoulsFormats
                 public UnkStruct2 DeepCopy()
                 {
                     var unk2 = (UnkStruct2)MemberwiseClone();
-                    unk2.DispGroups = (int[])DispGroups.Clone();
+                    unk2.DispGroups = (uint[])DispGroups.Clone();
                     return unk2;
                 }
 
                 internal UnkStruct2(BinaryReaderEx br)
                 {
                     Condition = br.ReadInt32();
-                    DispGroups = br.ReadInt32s(8);
+                    DispGroups = br.ReadUInt32s(8);
                     Unk24 = br.ReadInt16();
                     Unk26 = br.ReadInt16();
                     br.AssertPattern(0x20, 0x00);
@@ -895,7 +893,7 @@ namespace SoulsFormats
                 internal void Write(BinaryWriterEx bw)
                 {
                     bw.WriteInt32(Condition);
-                    bw.WriteInt32s(DispGroups);
+                    bw.WriteUInt32s(DispGroups);
                     bw.WriteInt16(Unk24);
                     bw.WriteInt16(Unk26);
                     bw.WritePattern(0x20, 0x00);
@@ -978,24 +976,24 @@ namespace SoulsFormats
                 public float TransitionTime { get; set; }
 
                 /// <summary>
-                /// Unknown.
+                /// Value of the hundredths place of a Gparam to override use.
                 /// </summary>
-                public sbyte Unk18 { get; set; }
+                public sbyte GparamSubID_Base { get; set; }
 
                 /// <summary>
-                /// Unknown.
+                /// Value of the hundredths place of a Gparam to override Base with.
                 /// </summary>
-                public sbyte Unk19 { get; set; }
+                public sbyte GparamSubID_Override1 { get; set; }
 
                 /// <summary>
-                /// Unknown.
+                /// Value of the hundredths place of a Gparam to override Base and Override 1 with.
                 /// </summary>
-                public sbyte Unk1A { get; set; }
+                public sbyte GparamSubID_Override2 { get; set; }
 
                 /// <summary>
-                /// Unknown.
+                /// Value of the hundredths place of a Gparam to override Base and Override 1 and Override 2 with.
                 /// </summary>
-                public sbyte Unk1B { get; set; }
+                public sbyte GparamSubID_Override3 { get; set; }
 
                 /// <summary>
                 /// Unknown.
@@ -1023,10 +1021,10 @@ namespace SoulsFormats
                 public SceneGparamConfig()
                 {
                     TransitionTime = 0.0f;
-                    Unk18 = -1;
-                    Unk19 = -1;
-                    Unk1A = -1;
-                    Unk1B = -1;
+                    GparamSubID_Base = -1;
+                    GparamSubID_Override1 = -1;
+                    GparamSubID_Override2 = -1;
+                    GparamSubID_Override3 = -1;
                     Unk1C = -1;
                     Unk1D = -1;
                     Unk20 = -1;
@@ -1047,10 +1045,10 @@ namespace SoulsFormats
                     br.AssertPattern(16, 0x00);
                     TransitionTime = br.ReadSingle();
                     br.AssertInt32(0);
-                    Unk18 = br.ReadSByte();
-                    Unk19 = br.ReadSByte();
-                    Unk1A = br.ReadSByte();
-                    Unk1B = br.ReadSByte();
+                    GparamSubID_Base = br.ReadSByte();
+                    GparamSubID_Override1 = br.ReadSByte();
+                    GparamSubID_Override2 = br.ReadSByte();
+                    GparamSubID_Override3 = br.ReadSByte();
                     Unk1C = br.ReadSByte();
                     Unk1D = br.ReadSByte();
                     br.AssertSByte(0);
@@ -1067,10 +1065,10 @@ namespace SoulsFormats
                     bw.WritePattern(16, 0x00);
                     bw.WriteSingle(TransitionTime);
                     bw.WriteInt32(0);
-                    bw.WriteSByte(Unk18);
-                    bw.WriteSByte(Unk19);
-                    bw.WriteSByte(Unk1A);
-                    bw.WriteSByte(Unk1B);
+                    bw.WriteSByte(GparamSubID_Base);
+                    bw.WriteSByte(GparamSubID_Override1);
+                    bw.WriteSByte(GparamSubID_Override2);
+                    bw.WriteSByte(GparamSubID_Override3);
                     bw.WriteSByte(Unk1C);
                     bw.WriteSByte(Unk1D);
                     bw.WriteSByte(0);
@@ -1265,7 +1263,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown.
                 /// </summary>
-                public int MapID { get; set; }
+                public byte[] MapID { get; private set; }
 
                 /// <summary>
                 /// Unknown.
@@ -1290,19 +1288,24 @@ namespace SoulsFormats
                 /// <summary>
                 /// Creates an UnkStruct7 with default values.
                 /// </summary>
-                public UnkStruct10() { }
+                public UnkStruct10()
+                {
+                    MapID = new byte[4];
+                }
 
                 /// <summary>
                 /// Creates a deep copy of the struct.
                 /// </summary>
                 public UnkStruct10 DeepCopy()
                 {
-                    return (UnkStruct10)MemberwiseClone();
+                    var unks10 = (UnkStruct10)MemberwiseClone();
+                    unks10.MapID = (byte[])MapID.Clone();
+                    return unks10;
                 }
 
                 internal UnkStruct10(BinaryReaderEx br)
                 {
-                    MapID = br.ReadInt32();
+                    MapID = br.ReadBytes(4);
                     Unk04 = br.ReadInt32();
                     br.AssertInt32(0);
                     Unk0C = br.ReadInt32();
@@ -1314,7 +1317,7 @@ namespace SoulsFormats
 
                 internal void Write(BinaryWriterEx bw)
                 {
-                    bw.WriteInt32(MapID);
+                    bw.WriteBytes(MapID);
                     bw.WriteInt32(Unk04);
                     bw.WriteInt32(0);
                     bw.WriteInt32(Unk0C);
@@ -1841,6 +1844,28 @@ namespace SoulsFormats
             /// </summary>
             public class Collision : Part
             {
+                /// <summary>
+                /// HitFilterType
+                /// </summary>
+                public enum HitFilterType : byte
+                {
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+                    Standard = 8,
+                    CameraOnly = 9,
+                    EnemyOnly = 11,
+                    FallDeathCam = 13,
+                    Kill = 15,
+                    Unk16 = 16,
+                    Unk17 = 17,
+                    Unk19 = 19,
+                    Unk20 = 20,
+                    Unk22 = 22,
+                    Unk23 = 23,
+                    Unk24 = 24,
+                    Unk29 = 29,
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+                }
+
                 private protected override PartType Type => PartType.Collision;
                 private protected override bool HasUnk1 => true;
                 private protected override bool HasUnk2 => true;
@@ -1888,9 +1913,9 @@ namespace SoulsFormats
                 public UnkStruct11 Unk11 { get; set; }
 
                 /// <summary>
-                /// Unknown.
+                /// Sets collision behavior. Fall collision, death collision, enemy-only collision, etc.
                 /// </summary>
-                public byte UnkT00 { get; set; }
+                public HitFilterType HitFilterID { get; set; }
 
                 /// <summary>
                 /// Unknown.
@@ -1930,6 +1955,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// Used to determine invasion eligibility.
                 /// </summary>
+                [MSBParamReference(ParamName = "PlayRegionParam")]
                 public int PlayRegionID { get; set; }
 
                 /// <summary>
@@ -1980,7 +2006,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// Disables Fast Travel if Event Flag is not set.
                 /// </summary>
-                public int EnableFastTravelEventFlagID { get; set; }
+                public uint EnableFastTravelEventFlagID { get; set; }
 
                 /// <summary>
                 /// Unknown.
@@ -2022,7 +2048,7 @@ namespace SoulsFormats
 
                 private protected override void ReadTypeData(BinaryReaderEx br)
                 {
-                    UnkT00 = br.ReadByte(); // Pav says Type, did it change?
+                    HitFilterID = br.ReadEnum8<HitFilterType>();
                     UnkT01 = br.ReadByte();
                     UnkT02 = br.ReadByte();
                     UnkT03 = br.ReadBoolean();
@@ -2048,7 +2074,7 @@ namespace SoulsFormats
                     UnkT3E = br.ReadInt16();
                     UnkT40 = br.ReadSingle();
                     br.AssertInt32(0);
-                    EnableFastTravelEventFlagID = br.ReadInt32();
+                    EnableFastTravelEventFlagID = br.ReadUInt32();
                     UnkT4C = br.AssertInt16(0, 1);
                     UnkT4E = br.ReadInt16();
                 }
@@ -2063,7 +2089,7 @@ namespace SoulsFormats
 
                 private protected override void WriteTypeData(BinaryWriterEx bw)
                 {
-                    bw.WriteByte(UnkT00);
+                    bw.WriteByte((byte)HitFilterID);
                     bw.WriteByte(UnkT01);
                     bw.WriteByte(UnkT02);
                     bw.WriteBoolean(UnkT03);
@@ -2089,7 +2115,7 @@ namespace SoulsFormats
                     bw.WriteInt16(UnkT3E);
                     bw.WriteSingle(UnkT40);
                     bw.WriteInt32(0);
-                    bw.WriteInt32(EnableFastTravelEventFlagID);
+                    bw.WriteUInt32(EnableFastTravelEventFlagID);
                     bw.WriteInt16(UnkT4C);
                     bw.WriteInt16(UnkT4E);
                 }
@@ -2493,7 +2519,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown.
                 /// </summary>
-                public int UnkT58 { get; set; }
+                public int UnkModelMaskAndAnimID { get; set; }
 
                 /// <summary>
                 /// Unknown.
@@ -2763,9 +2789,9 @@ namespace SoulsFormats
                     public float Unk10 { get; set; }
 
                     /// <summary>
-                    /// Unknown.
+                    /// Disables the asset when the specified map is loaded.
                     /// </summary>
-                    public int Unk14 { get; set; }
+                    public sbyte[] DisableWhenMapLoadedMapID { get; private set; }
 
                     /// <summary>
                     /// Unknown.
@@ -2795,14 +2821,19 @@ namespace SoulsFormats
                     /// <summary>
                     /// Creates an AssetUnkStruct3 with default values.
                     /// </summary>
-                    public AssetUnkStruct3() { }
+                    public AssetUnkStruct3()
+                    {
+                        DisableWhenMapLoadedMapID = new sbyte[4];
+                    }
 
                     /// <summary>
                     /// Creates a deep copy of the struct.
                     /// </summary>
                     public AssetUnkStruct3 DeepCopy()
                     {
-                        return (AssetUnkStruct3)MemberwiseClone();
+                        var unks3 = (AssetUnkStruct3)MemberwiseClone();
+                        unks3.DisableWhenMapLoadedMapID = (sbyte[])DisableWhenMapLoadedMapID.Clone();
+                        return unks3;
                     }
 
                     internal AssetUnkStruct3(BinaryReaderEx br)
@@ -2816,7 +2847,7 @@ namespace SoulsFormats
                         Unk0C = br.ReadInt16();
                         Unk0E = br.ReadInt16();
                         Unk10 = br.ReadSingle();
-                        Unk14 = br.ReadInt32();
+                        DisableWhenMapLoadedMapID = br.ReadSBytes(4);
                         Unk18 = br.ReadInt32();
                         Unk1C = br.ReadInt32();
                         Unk20 = br.ReadInt32();
@@ -2843,7 +2874,7 @@ namespace SoulsFormats
                         bw.WriteInt16(Unk0C);
                         bw.WriteInt16(Unk0E);
                         bw.WriteSingle(Unk10);
-                        bw.WriteInt32(Unk14);
+                        bw.WriteSBytes(DisableWhenMapLoadedMapID);
                         bw.WriteInt32(Unk18);
                         bw.WriteInt32(Unk1C);
                         bw.WriteInt32(Unk20);
@@ -3036,7 +3067,7 @@ namespace SoulsFormats
                     br.AssertByte(0);
                     UnkT53 = br.ReadByte();
                     UnkT54 = br.ReadInt32();
-                    UnkT58 = br.ReadInt32();
+                    UnkModelMaskAndAnimID = br.ReadInt32();
                     UnkT5C = br.ReadInt32();
                     UnkT60 = br.ReadInt32();
                     UnkT64 = br.ReadInt32();
@@ -3089,7 +3120,7 @@ namespace SoulsFormats
                     bw.WriteByte(0);
                     bw.WriteByte(UnkT53);
                     bw.WriteInt32(UnkT54);
-                    bw.WriteInt32(UnkT58);
+                    bw.WriteInt32(UnkModelMaskAndAnimID);
                     bw.WriteInt32(UnkT5C);
                     bw.WriteInt32(UnkT60);
                     bw.WriteInt32(UnkT64);
