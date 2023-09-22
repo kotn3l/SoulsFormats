@@ -2,22 +2,56 @@
 
 namespace SoulsFormats
 {
-    public class MPObject
+    /// <summary>
+    /// Available types for param values.
+    /// </summary>
+    public enum ParamType : byte
+    {
+        /// <summary>
+        /// (bool) A 1-byte boolean.
+        /// </summary>
+        Bool = 0,
+
+        /// <summary>
+        /// (float) A 32-bit float.
+        /// </summary>
+        Float = 1,
+
+        /// <summary>
+        /// (float[2]) Two 32-bit floats.
+        /// </summary>
+        Float2 = 2,
+
+        /// <summary>
+        /// (float[3]) Three 32-bit floats.
+        /// </summary>
+        Float3 = 10,
+
+        /// <summary>
+        /// (float[4]) Four 32-bit floats.
+        /// </summary>
+        Float4 = 11,
+
+        /// <summary>
+        /// (float[5]) Five 32-bit floats.
+        /// </summary>
+        Float5 = 13,
+    }
+    public class MPTexture
     {
         public string Key { get; set; }
         public string Group { get; set; }
         public string Texture { get; set; }
         public byte[] GodKnows { get; set; }
 
-        public MPObject(BinaryReaderEx br, byte i)
+        public MPTexture(BinaryReaderEx br, byte i)
         {
-            int strOffset = br.ReadInt32(); //98
+            long strOffset = br.ReadInt64(); //98
             br.StepIn(strOffset);
             {
                 Key = br.ReadUTF16();
             }
             br.StepOut();
-            br.AssertInt32(0);
 
             br.AssertByte(16);
             br.AssertByte(i);
@@ -25,21 +59,19 @@ namespace SoulsFormats
             short UnkA1 = br.ReadInt16();
             br.AssertInt32(-1);
 
-            int name1 = br.ReadInt32(); //str offset again
+            long name1 = br.ReadInt64(); //str offset again
             br.StepIn(name1);
             {
                 Texture = br.ReadUTF16();
             }
             br.StepOut();
-            br.AssertInt32(0);
 
-            int name2 = br.ReadInt32(); //str offset again
+            long name2 = br.ReadInt64(); //str offset again
             br.StepIn(name2);
             {
                 Group = br.ReadUTF16();
             }
             br.StepOut();
-            br.AssertInt32(0);
 
             //var f = br.ReadDouble();
             GodKnows = br.ReadBytes(4);
@@ -48,19 +80,57 @@ namespace SoulsFormats
             br.AssertInt32(0);
         }
     }
+    public class MPParams
+    {
+        public string Key { get; set; }
+        public object Value { get; set; }
+        public byte[] GodKnows { get; set; }
+        public ParamType Type { get; set; }
 
+        public MPParams(BinaryReaderEx br)
+        {
+            Key = br.GetUTF16(br.ReadInt64());
+            for (int i = 0; i < 7; i++)
+            {
+                br.AssertInt32(0);
+            }
+
+            int vmi1 = br.ReadInt32();
+            int vmi2 = br.ReadInt32();
+            //byte vmi3 = br.ReadByte(); //enum
+            Type = br.ReadEnum8<ParamType>();
+            br.AssertByte(0, 2);
+            byte vmi4 = br.ReadByte();
+            byte vmi5 = br.ReadByte();
+            GodKnows = br.ReadBytes(4);
+
+            switch (Type)
+            {
+                case ParamType.Float: Value = br.ReadSingle(); br.AssertInt64(0); br.AssertInt64(0); br.AssertInt64(0); break;
+                case ParamType.Float2: Value = br.ReadSingles(2); br.AssertInt64(0); br.AssertInt64(0); br.AssertInt32(0); break;
+                case ParamType.Float5: Value = br.ReadSingles(5); br.AssertInt64(0); break;
+
+                default:
+                    throw new NotImplementedException($"Unimplemented value type: {Type}");
+            }
+
+
+            //Value = br.ReadSingles(5);
+            
+        }
+    }
 
     public class METAPARAM : SoulsFile<METAPARAM>
     {
-        public short TextureCount { get; set; }
-        public MPObject[] Objects { get; set; }
+        public MPTexture[] Textures { get; set; }
+        public MPParams[] Params { get; set; }
         public short Unk10 { get; set; }
         public short Unk18 { get; set; }
         public short Unk20 { get; set; }
         public short Unk2C { get; set; }
         public short Unk30 { get; set; }
         public short Unk34 { get; set; }
-        public int Unk48 { get; set; }
+        public int ColorCount { get; set; }
 
         public METAPARAM()
         {
@@ -83,22 +153,18 @@ namespace SoulsFormats
             br.AssertASCII("SMD\0");
             br.AssertInt32(0);
             br.AssertInt32(6);
-            TextureCount = br.ReadInt16(); //texture count ?
-            Objects = new MPObject[TextureCount];
+            var texCount = br.ReadInt16(); //texture count ?
+            Textures = new MPTexture[texCount];
             br.AssertInt16(0);
-            var offset1 = br.ReadInt16(); //could be 2 bytes, then a short being 0 always
-            br.AssertInt16(0);
+            long offset1 = br.ReadInt64(); //could be 2 bytes, then a short being 0 always
+            long offset2 = br.ReadInt64(); //could be 2 bytes, then a short being 0 always
+            long offset3 = br.ReadInt64(); //could be 2 bytes, then a short being 0 always. all 3 seems to eb the same. maybe count values?
             br.AssertInt32(0);
-            var offset2 = br.ReadInt16(); //could be 2 bytes, then a short being 0 always
-            br.AssertInt16(0);
-            br.AssertInt32(0);
-            var offset3 = br.ReadInt16(); //could be 2 bytes, then a short being 0 always. all 3 seems to eb the same. maybe count values?
-            br.AssertInt16(0);
-            br.AssertInt32(0);
-            br.AssertInt32(0); //28. those 3 repeating shit might be offsets? header length maybe.
 
-            Unk2C = br.ReadInt16(); //some count
+            var paramCount = br.ReadInt16(); 
             br.AssertInt16(0);
+
+            Params = new MPParams[paramCount];
 
             Unk30 = br.ReadInt16();
             br.AssertInt16(0);
@@ -106,17 +172,13 @@ namespace SoulsFormats
             Unk34 = br.ReadInt16();
             br.AssertInt16(0);
 
-            br.AssertInt32(0, 4096); //enum? 38
-            br.AssertInt32(0);
+            br.AssertInt64(0, 4096); //enum? 38
 
-            br.AssertInt32(2);
-            br.AssertInt32(0);
+            br.AssertInt64(2);
 
-            Unk48 = br.ReadInt32();
-            br.AssertInt32(0);
+            long colorLength = br.ReadInt64();
 
-            br.AssertInt32(17); //oddly specific
-            br.AssertInt32(0);
+            br.AssertInt64(17); //oddly specific
 
             byte Unk58 = br.ReadByte();
             byte Unk59 = br.ReadByte();
@@ -128,9 +190,9 @@ namespace SoulsFormats
                 br.AssertInt32(0);
             }
 
-            for (byte i = 0; i < TextureCount; i++)
+            for (byte i = 0; i < texCount; i++)
             {
-                Objects[i] = new MPObject(br, i);
+                Textures[i] = new MPTexture(br, i);
             }
 
             int offset4 = br.ReadInt32();
@@ -146,11 +208,30 @@ namespace SoulsFormats
                 throw new Exception();
             }
 
-            br.StepIn(offset4);
-            {
+            if (br.Position != offset4)
+            {               
+                for (int i = 0; i < paramCount; i++)
+                {
+                    Params[i] = new MPParams(br);
+                }
+                /*int c = 0;
+                while (br.Position < offset1 + colorLength)
+                {
+                    Params[c] = new MPParams(br);
+                    c++;
+                }*/
 
+                if (br.Position != offset4)
+                {
+                    throw new Exception();
+                }
+
+                ;
             }
-            br.StepOut();
+
+
+
+            
             ;
 
         }
