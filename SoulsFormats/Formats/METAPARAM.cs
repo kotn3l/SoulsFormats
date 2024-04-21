@@ -50,7 +50,7 @@ namespace SoulsFormats
             {
                 Name = br.GetUTF16(br.ReadInt64());
 
-                br.AssertByte(16);
+                br.AssertByte(16, 17);
                 br.AssertByte(i);
 
                 short unkA1 = br.ReadInt16();
@@ -87,6 +87,7 @@ namespace SoulsFormats
 
                 switch (Type)
                 {
+                    case ParamType.Bool: Value = br.ReadBoolean(); br.AssertByte(0); br.AssertInt16(0); br.AssertInt64(0); br.AssertInt64(0); br.AssertInt64(0); break;
                     case ParamType.Float: Value = br.ReadSingle(); br.AssertInt64(0); br.AssertInt64(0); br.AssertInt64(0); break;
                     case ParamType.Float2: Value = br.ReadSingles(2); br.AssertInt64(0); br.AssertInt64(0); br.AssertInt32(0); break;
                     case ParamType.Float5: Value = br.ReadSingles(5); br.AssertInt64(0); break;
@@ -96,9 +97,33 @@ namespace SoulsFormats
                 }
             }
         }
+        public class MPObject
+        {
+            public string Name { get; set; }
+            public MPObject(BinaryReaderEx br)
+            {
+                Name = br.GetUTF16(br.ReadInt64());
+                br.AssertPattern(28, 0);
+
+                var unk1 = br.ReadInt32();
+                var unk2 = br.ReadInt32();
+                var unk3 = br.ReadInt32();
+
+                var unk35 = br.ReadInt32();
+                //br.AssertInt32(0, 1, 2, 3); //sometimes 1
+                br.AssertInt16(0);
+
+                var unk4 = br.ReadByte();
+                var unk5 = br.ReadByte();
+                var unk6 = br.ReadInt32();
+
+                var godknows = br.ReadBytes(4);
+                br.AssertPattern(32, 0);
+            }
+        }
         public Sampler[] Textures { get; set; }
         public Param[] Params { get; set; }
-
+        public MPObject[] Objects { get; set; }
         public METAPARAM()
         {
 
@@ -120,32 +145,30 @@ namespace SoulsFormats
             br.AssertASCII("SMD\0");
             br.AssertInt32(0);
             br.AssertInt32(6);
-            var texCount = br.ReadInt32(); //texture count ?
+            var texCount = br.ReadUInt32();
             Textures = new Sampler[texCount];
-            long offset1 = br.ReadInt64(); //could be 2 bytes, then a short being 0 always
-            /*long offset2 = br.ReadInt64(); //could be 2 bytes, then a short being 0 always
-            long offset3 = br.ReadInt64();*/ //could be 2 bytes, then a short being 0 always. all 3 seems to eb the same. maybe count values?
-            br.AssertInt64(offset1);
-            br.AssertInt64(offset1);
-            br.AssertInt32(0);
+            long textureEndOffset = br.ReadInt64(); 
+            br.AssertInt64(textureEndOffset); //some other offset, it was always the same as the first one tho. params dont seem to have different offsets
+            
+            long objectOffset = br.ReadInt64(); //noidea object end ???
+            var objectCount = br.ReadUInt32();
+            Objects = new MPObject[objectCount];
 
-            var paramCount = br.ReadInt32(); 
+            var paramCount = br.ReadUInt32(); 
             Params = new Param[paramCount];
 
-            var unk30 = br.ReadInt32(); //1025 in all of them
+            br.AssertInt32(1025); //1025 in all of them
             var unk34 = br.ReadInt32();
 
-            br.AssertInt64(0, 4096); //enum? 38
+            long unk38 = br.ReadInt64(); //enum? 0, 4096, 4112. 
             br.AssertInt64(2);
 
-            long colorLength = br.ReadInt64();
-            br.AssertInt64(17); //oddly specific
+            int unk48 = br.ReadInt32();
+            int objectLength = br.ReadInt32();
+            br.AssertInt32(17); //oddly specific
+            int unk54 = br.ReadInt32();
 
-            byte Unk58 = br.ReadByte();
-            byte Unk59 = br.ReadByte();
-            br.AssertByte(0);
-            byte Unk5B = br.ReadByte();
-
+            var Unk58 = br.ReadBytes(4);
             br.AssertPattern(60, 0);
 
             for (byte i = 0; i < texCount; i++)
@@ -153,19 +176,24 @@ namespace SoulsFormats
                 Textures[i] = new Sampler(br, i);
             }
 
-            int offset4 = br.ReadInt32();
-            br.AssertInt32(0);
+            long offset4 = br.ReadInt64();
             br.AssertInt32(5);
             br.AssertPattern(28, 0);
 
-            if (br.Position != offset1)
+            if (br.Position != textureEndOffset)
             {
                 throw new Exception();
+            }
+
+            for (int i = 0; i < objectCount; i++)
+            {
+                Objects[i] = new MPObject(br);
             }
             for (int i = 0; i < paramCount; i++)
             {
                 Params[i] = new Param(br);
             }
+
             if (br.Position != offset4)
             {
                 throw new Exception();
@@ -175,8 +203,9 @@ namespace SoulsFormats
 
             byte UnkEnd1 = br.ReadByte();
             byte UnkEnd2 = br.ReadByte();
-            br.AssertInt16(0);
-            br.AssertInt64(0);
+            short Unknew = br.ReadInt16();
+            br.AssertInt32(0);
+            int Unknew2 = br.ReadInt32();
             br.AssertInt32(0);
             br.AssertInt64(1);
 
@@ -184,13 +213,14 @@ namespace SoulsFormats
             {
                 br.AssertByte(UnkEnd1);
                 br.AssertByte(UnkEnd2);
-                br.AssertInt16(0);
-                br.AssertInt64(0);
+                br.AssertInt16(Unknew);
+                br.AssertInt32(0);
+                br.AssertInt32(Unknew2);
                 br.AssertInt32(0);
                 br.AssertInt64(i);
             }
-            br.AssertInt64(0);
-            br.AssertInt64(0);
+            br.AssertInt64(1, 0, UnkEnd1);
+            br.AssertInt64(0, Unknew2);
             ;
 
         }

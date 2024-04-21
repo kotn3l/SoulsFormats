@@ -45,6 +45,10 @@ namespace SoulsFormats
             [RotationRadians]
             [RotationXZY]
             public Vector3 Rotation { get; set; }
+            /// <summary>
+            /// 
+            /// </summary>
+            public Quaternion RotationQ { get; set; }
 
             /// <summary>
             /// Scale of this bone.
@@ -88,6 +92,15 @@ namespace SoulsFormats
                     * Matrix4x4.CreateRotationX(Rotation.X)
                     * Matrix4x4.CreateRotationZ(Rotation.Z)
                     * Matrix4x4.CreateRotationY(Rotation.Y)
+                    * Matrix4x4.CreateTranslation(Position);
+            }
+            /// <summary>
+            /// Creates a transformation matrix from the scale, rotation, and translation of the bone.
+            /// </summary>
+            public Matrix4x4 ComputeLocalTransformQ()
+            {
+                return Matrix4x4.CreateScale(Scale)
+                    * Matrix4x4.CreateFromQuaternion(RotationQ)
                     * Matrix4x4.CreateTranslation(Position);
             }
 

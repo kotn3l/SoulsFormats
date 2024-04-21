@@ -64,6 +64,11 @@ namespace SoulsFormats
         /// </summary>
         public int Unk74 { get; set; }
 
+        public void ClearCache()
+        {
+            Cache = new FlverCache();
+        }
+
         /// <summary>
         /// Creates a FLVER with a default header and empty lists.
         /// </summary>

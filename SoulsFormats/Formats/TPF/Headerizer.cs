@@ -243,7 +243,7 @@ namespace SoulsFormats
             //int imageCount = type == TPF.TexType.Cubemap ? 6 : 1;
             //imageCount = type == TPF.TexType.Volume ? 28 : imageCount;
             int padDimensions = 1;
-            if (format == 102 || format == 0 || format == 108 || format == 103 || format == 1 || format == 106 || format == 107 || format == 109)
+            if (format == 102 || format == 0 || format == 108 || format == 103 || format == 1 || format == 106 || format == 107 || format == 109 || format == 25)
                 padDimensions = 32;
 
             List<Image> images;
@@ -296,7 +296,7 @@ namespace SoulsFormats
                 texelWidth = (int)(Math.Ceiling(paddedWidth / 4f) * Math.Ceiling(paddedHeight / 4f) * texelSize);
             }
 
-            if (format == 102 || format == 108 || format == 0 || format == 103 || format == 1 || format == 115 || format == 106 || format == 107 || format == 109)
+            if (format == 102 || format == 108 || format == 0 || format == 103 || format == 1 || format == 115 || format == 106 || format == 107 || format == 109 || format == 25)
                 texelWidth = paddedWidth / 4; //maybe needed?
             /*else if (format == 105)
                 texelWidth = 4;*/
@@ -313,7 +313,7 @@ namespace SoulsFormats
                 }
                 unswizzled = trimmed;
             }
-            else if (format == 102 || format == 0 || format == 108 || format == 103 || format == 1 || format == 109 || format == 115 || format == 106 || format == 107)
+            else if (format == 102 || format == 0 || format == 108 || format == 103 || format == 1 || format == 109 || format == 115 || format == 106 || format == 107 || format == 25)
             {
                 unswizzled = DeswizzlePS4(swizzled, format, texelSize, paddedWidth, paddedHeight);
                 byte[] trimmed = new byte[(int)Math.Max(1, width / 4f) * (int)Math.Max(1, height / 4f) * texelSize];

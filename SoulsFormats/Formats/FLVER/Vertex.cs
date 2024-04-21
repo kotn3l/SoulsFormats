@@ -84,7 +84,8 @@ namespace SoulsFormats
             {
                 if (index > UVCount)
                 {
-                    throw new ArgumentOutOfRangeException("Index is too big");
+                    return Vector3.Zero;
+                    //throw new ArgumentOutOfRangeException("Index is too big");
                 }
                 return new Vector3(UVs[index * 3], UVs[index * 3 + 1], UVs[index * 3 + 2]);
             }
@@ -226,7 +227,8 @@ namespace SoulsFormats
                         else if (member.Type == LayoutType.Float4)
                         {
                             Position = br.ReadVector3();
-                            br.AssertSingle(0);
+                            //br.AssertSingle(0);
+                            float see = br.ReadSingle();
                         }
                         else if (member.Type == LayoutType.EdgeCompressed)
                         {
@@ -386,6 +388,7 @@ namespace SoulsFormats
                         {
                             //AddUV(new Vector3(br.ReadInt16(), br.ReadInt16(), br.ReadInt16()) / uvFactor);
                             AddUV(ReadFloat16NormXYZ(br));
+                            //br.AssertInt16(0);
                             br.ReadInt16();
                         }
                         else if (member.Type == LayoutType.Unk2D)
@@ -771,7 +774,11 @@ namespace SoulsFormats
                     }
                     else if (member.Semantic == LayoutSemantic.VertexColor)
                     {
-                        VertexColor color = colorQueue.Dequeue();
+                        VertexColor color = new VertexColor(0,0,0,0);
+                        if (colorQueue.Count > 0)
+                        {
+                            color = colorQueue.Dequeue();
+                        }
                         if (member.Type == LayoutType.Float4)
                         {
                             color.WriteFloatRGBA(bw);

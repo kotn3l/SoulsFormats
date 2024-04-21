@@ -14,7 +14,7 @@ namespace SoulsFormats
             /// <summary>
             /// The total size of all ValueTypes in this layout.
             /// </summary>
-            public int Size => this.Where(member => member.Unk02 == 0).Sum(member => member.Size);
+            public int Size => this.Sum(member => member.Size);
 
             /// <summary>
             /// Creates a new empty BufferLayout.
@@ -38,7 +38,7 @@ namespace SoulsFormats
                         {
                             var member = new FLVER.LayoutMember(br, structOffset);
                             structOffset += member.Size;
-                            //this.Add(member);
+                            this.Add(member);
                         }
                         structOffset = 0;
                         for (int i = 3; i < memberCount; i++)
