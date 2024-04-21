@@ -323,12 +323,12 @@ namespace SoulsFormats
             public byte UnkA1 { get; set; }
 
             /// <summary>
-            /// Unknown.
+            /// Distance from start before light appears.
             /// </summary>
             public byte UnkA2 { get; set; }
             
             /// <summary>
-            /// Unknown.
+            /// Distance required for a light to transition into view. 0 = always enabled.
             /// </summary>
             public float UnkAC { get; set; }
             

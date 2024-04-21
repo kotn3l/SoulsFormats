@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DotNext.IO.MemoryMappedFiles;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;

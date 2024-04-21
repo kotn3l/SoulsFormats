@@ -313,6 +313,14 @@ namespace SoulsFormats
         }
 
         /// <summary>
+        /// Reads an array of one-byte unsigned integers.
+        /// </summary>
+        public Span<byte> ReadBytesSpan(int count)
+        {
+            return ReadMultiSpan<byte>(count);
+        }
+
+        /// <summary>
         /// Reads the specified number of bytes from the stream into the buffer starting at the specified index.
         /// </summary>
         public void ReadBytes(byte[] buffer, int index, int count)
@@ -335,6 +343,13 @@ namespace SoulsFormats
         {
             StepIn(offset);
             byte[] result = ReadBytes(count);
+            StepOut();
+            return result;
+        }
+        public Span<byte> GetBytesSpan(long offset, int count)
+        {
+            StepIn(offset);
+            Span<byte> result = ReadBytesSpan(count);
             StepOut();
             return result;
         }

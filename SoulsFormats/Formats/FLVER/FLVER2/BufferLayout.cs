@@ -22,7 +22,7 @@ namespace SoulsFormats
             /// </summary>
             public BufferLayout() : base() { }
 
-            internal BufferLayout(BinaryReaderEx br) : base()
+            internal BufferLayout(BinaryReaderEx br, FLVER2Header header) : base()
             {
                 int memberCount = br.ReadInt32();
                 br.AssertInt32(0);
@@ -33,11 +33,30 @@ namespace SoulsFormats
                 {
                     int structOffset = 0;
                     Capacity = memberCount;
-                    for (int i = 0; i < memberCount; i++)
+                    if (header.Unk68 == 5 && header.Unk6B != 0)
                     {
-                        var member = new FLVER.LayoutMember(br, structOffset);
-                        structOffset += member.Size;
-                        Add(member);
+                        for (int i = 0; i < 3; i++)
+                        {
+                            var member = new FLVER.LayoutMember(br, structOffset);
+                            structOffset += member.Size;
+                            this.Add(member);
+                        }
+                        structOffset = 0;
+                        for (int i = 3; i < memberCount; i++)
+                        {
+                            var member = new FLVER.LayoutMember(br, structOffset);
+                            structOffset += member.Size;
+                            this.Add(member);
+                        }
+                    }
+                    else
+                    {
+                        for (int i = 0; i < memberCount; i++)
+                        {
+                            var member = new FLVER.LayoutMember(br, structOffset);
+                            structOffset += member.Size;
+                            this.Add(member);
+                        }
                     }
                 }
                 br.StepOut();

@@ -639,7 +639,7 @@ namespace SoulsFormats
                 public int ShadowParamID { get; set; }
 
                 /// <summary>
-                /// Unknown.
+                /// Amount of time it takes for GParam to transition (in seconds). -1 = Some default time.
                 /// </summary>
                 public int DofGlareQualityID { get; set; }
 

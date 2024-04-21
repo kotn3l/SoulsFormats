@@ -84,7 +84,8 @@ namespace SoulsFormats
             {
                 if (index > UVCount)
                 {
-                    throw new ArgumentOutOfRangeException("Index is too big");
+                    return Vector3.Zero;
+                    //throw new ArgumentOutOfRangeException("Index is too big");
                 }
                 return new Vector3(UVs[index * 3], UVs[index * 3 + 1], UVs[index * 3 + 2]);
             }
@@ -208,7 +209,8 @@ namespace SoulsFormats
                         else if (member.Type == LayoutType.Float4)
                         {
                             Position = br.ReadVector3();
-                            br.AssertSingle(0);
+                            //br.AssertSingle(0);
+                            float see = br.ReadSingle();
                         }
                         else if (member.Type == LayoutType.EdgeCompressed)
                         {

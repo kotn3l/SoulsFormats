@@ -21,6 +21,7 @@ namespace SoulsFormats
             internal int BufferIndex;
             internal int VertexCount;
             internal int BufferOffset;
+            internal int BufferLength;
 
             /// <summary>
             /// Creates a VertexBuffer with the specified layout.
@@ -38,7 +39,7 @@ namespace SoulsFormats
                 VertexCount = br.ReadInt32();
                 br.AssertInt32(0);
                 br.AssertInt32(0);
-                br.ReadInt32(); // Buffer length
+                BufferLength = br.ReadInt32(); // Buffer length
                 BufferOffset = br.ReadInt32();
             }
 

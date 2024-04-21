@@ -710,6 +710,7 @@ namespace SoulsFormats
                 /// </summary>
                 public sbyte[] EventIDs { get; private set; }
 
+
                 /// <summary>
                 /// Amount of time it takes for GParam to transition (in seconds). -1 = Some default time.
                 /// </summary>
@@ -991,7 +992,8 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown.
                 /// </summary>
-                public int UnkT14 { get; set; }
+                [MSBParamReference(ParamName = "CharaInitParam")]
+                public int CharaInitID { get; set; }
 
                 /// <summary>
                 /// ID in CharaInitParam determining equipment and stats for humans.

@@ -43,7 +43,7 @@ namespace SoulsFormats
                     TerminatorID = br.AssertInt32(id);
                     br.AssertInt32(100);
                     TerminatorLength = br.ReadInt32() - 0xC;
-                    br.AssertPattern(TerminatorLength, 0x00);
+                    br.ReadBytes(header.Unk6B);
                 }
             }
 

@@ -16,7 +16,7 @@ namespace SoulsFormats
             if (br.Length < 4)
                 return false;
             string magic = br.GetASCII(0, 4);
-            return magic == "DCP\0" || magic == "DCX\0";
+            return magic == "DCP\0" || magic == "DCX\0" || b0 == 0x78 && (b1 == 0x01 || b1 == 0x5E || b1 == 0x9C || b1 == 0xDA);
         }
 
         /// <summary>
@@ -83,9 +83,10 @@ namespace SoulsFormats
             type = Type.Unknown;
 
             string magic = br.ReadASCII(4);
+            string format;
             if (magic == "DCP\0")
             {
-                string format = br.GetASCII(4, 4);
+                format = br.GetASCII(4, 4);
                 if (format == "DFLT")
                 {
                     type = Type.DCP_DFLT;
@@ -97,7 +98,7 @@ namespace SoulsFormats
             }
             else if (magic == "DCX\0")
             {
-                string format = br.GetASCII(0x28, 4);
+                format = br.GetASCII(0x28, 4);
                 if (format == "EDGE")
                 {
                     type = Type.DCX_EDGE;

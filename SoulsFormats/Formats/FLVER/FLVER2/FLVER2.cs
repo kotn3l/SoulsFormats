@@ -184,9 +184,13 @@ namespace SoulsFormats
             br.AssertInt32(0);
             Header.Unk68 = br.AssertInt32([0, 1, 2, 3, 4]);
             br.AssertInt32(0);
+            Header.Unk68 = br.AssertInt16(0, 1, 2, 3, 4, 5);
+            Header.Unk6B = (char)br.ReadInt16();
+
             br.AssertInt32(0);
             Header.Unk74 = br.AssertInt32([0, 0x10]);
             br.AssertInt32(0);
+            Unk74 = br.ReadInt32();
             br.AssertInt32(0);
 
             Dummies = new List<FLVER.Dummy>(dummyCount);
@@ -217,7 +221,7 @@ namespace SoulsFormats
 
             BufferLayouts = new List<BufferLayout>(bufferLayoutCount);
             for (int i = 0; i < bufferLayoutCount; i++)
-                BufferLayouts.Add(new BufferLayout(br));
+                BufferLayouts.Add(new BufferLayout(br, Header));
 
             var textures = new List<Texture>(textureCount);
             for (int i = 0; i < textureCount; i++)
@@ -312,11 +316,12 @@ namespace SoulsFormats
 
             bw.WriteInt32(0);
             bw.WriteInt32(0);
-            bw.WriteInt32(Header.Unk68);
-            bw.WriteInt32(0);
+            bw.WriteInt16(Header.Unk68);
+            bw.WriteInt16((short)Header.Unk6B);
             bw.WriteInt32(0);
             bw.WriteInt32(Header.Unk74);
             bw.WriteInt32(0);
+            bw.WriteInt32(Unk74);
             bw.WriteInt32(0);
 
             foreach (FLVER.Dummy dummy in Dummies)
@@ -429,7 +434,7 @@ namespace SoulsFormats
 
             int alignment = Header.Version <= 0x2000E ? 0x20 : 0x10;
             bw.Pad(alignment);
-            if (Header.Version == 0x2000F || Header.Version == 0x20010)
+            if (Header.Version == 0x2000F || Header.Version == 0x20010 || Header.Version == 0x2001A || Header.Version == 0x2001B)
                 bw.Pad(0x20);
 
             int dataStart = (int)bw.Position;
@@ -451,8 +456,10 @@ namespace SoulsFormats
                 }
                 faceSetIndex += mesh.FaceSets.Count;
 
-                foreach (FLVER.Vertex vertex in mesh.Vertices)
-                    vertex.PrepareWrite();
+                for (int j = 0; j < mesh.VertexCount; j++)
+                {
+                    mesh.Vertices[j].PrepareWrite();
+                }
 
                 for (int j = 0; j < mesh.VertexBuffers.Count; j++)
                 {
@@ -468,7 +475,7 @@ namespace SoulsFormats
 
             bw.Pad(alignment);
             bw.FillInt32("DataSize", (int)bw.Position - dataStart);
-            if (Header.Version == 0x2000F || Header.Version == 0x20010)
+            if (Header.Version == 0x2000F || Header.Version == 0x20010 || Header.Version == 0x2001A || Header.Version == 0x2001B)
                 bw.Pad(0x20);
         }
     }

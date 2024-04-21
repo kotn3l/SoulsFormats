@@ -54,6 +54,7 @@ namespace SoulsFormats
             /// <summary>
             /// Optional bounding box struct; may be null.
             /// </summary>
+            [HideProperty]
             public BoundingBoxes BoundingBox { get; set; }
 
             private int[] faceSetIndices, vertexBufferIndices;
