@@ -22,6 +22,7 @@ namespace SoulsFormats
                 String = 10,
                 Custom = 11,
                 Color = 13,
+                ER_Unk = 18
             }
 
             public string Name { get; set; }
@@ -33,6 +34,8 @@ namespace SoulsFormats
             public object Value { get; set; }
 
             public List<Sequence> Sequences { get; set; }
+
+            private int unkInt;
 
             public CustomData()
             {
@@ -46,7 +49,7 @@ namespace SoulsFormats
             {
                 Name = br.ReadFixStrW(0x40);
                 Type = br.ReadEnum32<DataType>();
-                br.AssertInt32(Type == DataType.Color ? 3 : 0);
+                unkInt = br.ReadInt32();
 
                 long valueOffset = br.Position;
                 switch (Type)
@@ -61,6 +64,7 @@ namespace SoulsFormats
                     case DataType.String:
                     case DataType.Custom:
                     case DataType.Color: Value = br.ReadInt32(); break;
+                    case DataType.ER_Unk: Value = br.ReadInt32(); break;
                     default: throw new NotImplementedException($"Unimplemented custom data type: {Type}");
                 }
 
@@ -121,7 +125,7 @@ namespace SoulsFormats
             {
                 bw.WriteFixStrW(Name, 0x40, 0x00);
                 bw.WriteUInt32((uint)Type);
-                bw.WriteInt32(Type == DataType.Color ? 3 : 0);
+                bw.WriteInt32(unkInt);
 
                 int length = -1;
                 if (Type == DataType.String)
@@ -154,6 +158,7 @@ namespace SoulsFormats
                     case DataType.String:
                     case DataType.Custom:
                     case DataType.Color: bw.WriteInt32(length); break;
+                    case DataType.ER_Unk: bw.WriteInt32(length); break;
                     default: throw new NotImplementedException($"Unimplemented custom data type: {Type}");
                 }
 
@@ -238,7 +243,7 @@ namespace SoulsFormats
                     br.AssertInt32(0x1C); // Sequence size
                     int pointCount = br.ReadInt32();
                     ValueType = br.ReadEnum32<DataType>();
-                    PointType = br.AssertInt32(1, 2);
+                    PointType = br.AssertInt32([1, 2]);
                     br.AssertInt32(PointType == 1 ? 0x10 : 0x18); // Point size
                     int pointsOffset = br.ReadInt32();
                     int valueOffset = br.ReadInt32();
