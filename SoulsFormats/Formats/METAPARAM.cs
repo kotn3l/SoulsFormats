@@ -50,7 +50,7 @@ namespace SoulsFormats
             {
                 Name = br.GetUTF16(br.ReadInt64());
 
-                br.AssertByte(16, 17);
+                br.AssertByte([16, 17]);
                 br.AssertByte(i);
 
                 short unkA1 = br.ReadInt16();
@@ -80,7 +80,7 @@ namespace SoulsFormats
                 int vmi2 = br.ReadInt32();
                 //byte vmi3 = br.ReadByte(); //enum
                 Type = br.ReadEnum8<ParamType>();
-                br.AssertByte(0, 2);
+                br.AssertByte([0, 2]);
                 byte vmi4 = br.ReadByte();
                 byte vmi5 = br.ReadByte();
                 GodKnows = br.ReadBytes(4);
@@ -219,8 +219,8 @@ namespace SoulsFormats
                 br.AssertInt32(0);
                 br.AssertInt64(i);
             }
-            br.AssertInt64(1, 0, UnkEnd1);
-            br.AssertInt64(0, Unknew2);
+            br.AssertInt64([1, 0, UnkEnd1]);
+            br.AssertInt64([0, Unknew2]);
             ;
 
         }
