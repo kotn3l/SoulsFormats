@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using CommunityToolkit.HighPerformance.Buffers;
 using DotNext.IO.MemoryMappedFiles;
 
 namespace SoulsFormats
@@ -41,7 +43,7 @@ namespace SoulsFormats
         /// </summary>
         public int Unk18 { get; set; }
 
-        private IMappedMemoryOwner _mappedMemory = null;
+        private IMemoryOwner<byte> _mappedMemory = null;
 
         /// <summary>
         /// Creates an empty BND3 formatted for DS1.
@@ -68,7 +70,7 @@ namespace SoulsFormats
         /// <summary>
         /// Deserializes file data from a stream.
         /// </summary>
-        protected override void Read(BinaryReaderEx br, IMappedMemoryOwner owner)
+        protected override void Read(BinaryReaderEx br, IMemoryOwner<byte> owner)
         {
             _mappedMemory = owner;
             List<BinderFileHeader> fileHeaders = ReadHeader(this, br);

@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO.MemoryMappedFiles;
+using CommunityToolkit.HighPerformance.Buffers;
 using DotNext.IO.MemoryMappedFiles;
 
 namespace SoulsFormats
@@ -41,7 +43,7 @@ namespace SoulsFormats
         protected BinaryReaderEx DataBR;
 
         protected MemoryMappedFile _mappedFile;
-        protected IMappedMemoryOwner _mappedAccessor;
+        protected IMemoryOwner<byte> _mappedAccessor;
 
         /// <summary>
         /// Reads file data according to the header at the given index in Files.

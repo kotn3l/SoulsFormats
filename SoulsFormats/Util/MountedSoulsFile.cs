@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Buffers;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using CommunityToolkit.HighPerformance.Buffers;
 using DotNext.IO.MemoryMappedFiles;
 
 namespace SoulsFormats;
@@ -14,7 +16,7 @@ public abstract class MountedSoulsFile<TFormat> : SoulsFile<TFormat>, IDisposabl
     /// <summary>
     /// Loads file data while be given a memory owner object to keep the mapped memory alive
     /// </summary>
-    protected virtual void Read(BinaryReaderEx br, IMappedMemoryOwner owner)
+    protected virtual void Read(BinaryReaderEx br, IMemoryOwner<byte> owner)
     {
         throw new NotImplementedException("Read is not implemented for this format.");
     }
