@@ -34,13 +34,13 @@ jobs:
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
           dotnet build --no-restore
-          echo "::set-env name=COMMIT_HASH::$COMMIT_HASH"
+          echo "{commit_hash}={COMMIT_HASH}" >> "$GITHUB_ENV"
 
       - name: Publish Artifact
         id: publish_artifact
         uses: actions/upload-artifact@v2
         with:
-          name: SoulsFormats-kotn3l-$COMMIT_HASH
+          name: SoulsFormats-kotn3l-$commit_hash
           path: |
             **/bin/**/*.dll
             **/bin/**/*.pdb
