@@ -31,13 +31,15 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          dotnet build --no-restore
 
       - name: Publish Artifact
         id: publish_artifact
         uses: actions/upload-artifact@v2
         with:
-          name: SoulsFormats-kotn3l
+          name: SoulsFormats-kotn3l-$COMMIT_HASH
           path: |
             **/bin/**/*.dll
             **/bin/**/*.pdb
