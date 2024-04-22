@@ -34,6 +34,7 @@ jobs:
         run: |
           COMMIT_HASH=$(git rev-parse --short HEAD)
           dotnet build --no-restore
+          echo "::set-env name=COMMIT_HASH::$COMMIT_HASH"
 
       - name: Publish Artifact
         id: publish_artifact
