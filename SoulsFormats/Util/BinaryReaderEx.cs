@@ -6,8 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using CommunityToolkit.HighPerformance;
 using DotNext.Buffers;
-using Microsoft.Toolkit.HighPerformance;
 
 namespace SoulsFormats
 {
@@ -56,7 +56,7 @@ namespace SoulsFormats
         public unsafe T Read<T>() where T : unmanaged
         {
             var reader = new SpanReader<byte>(_memory.Span[(int)Position..]);
-            var ret = reader.Read<T>();
+            T ret = reader.Read<T>();
             Position += sizeof(T);
             return ret;
         }

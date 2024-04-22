@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using DotNext.IO.MemoryMappedFiles;
@@ -37,7 +38,7 @@ namespace SoulsFormats
         {
             using MemoryMappedFile headerFile = MemoryMappedFile.CreateFromFile(bhdPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
             _mappedFile = MemoryMappedFile.CreateFromFile(bdtPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
-            using IMappedMemoryOwner fsHeader = headerFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
+            using IMemoryOwner<byte> fsHeader = headerFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
             _mappedAccessor = _mappedFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
             var brHeader = new BinaryReaderEx(false, fsHeader.Memory);
             var brData = new BinaryReaderEx(false, _mappedAccessor.Memory);
@@ -50,7 +51,7 @@ namespace SoulsFormats
         public BXF4Reader(string bhdPath, Memory<byte> bdtBytes)
         {
             using MemoryMappedFile headerFile = MemoryMappedFile.CreateFromFile(bhdPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
-            using IMappedMemoryOwner fsHeader = headerFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
+            using IMemoryOwner<byte> fsHeader = headerFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
             var brHeader = new BinaryReaderEx(false, fsHeader.Memory);
             var brData = new BinaryReaderEx(false, bdtBytes);
             Read(brHeader, brData);
