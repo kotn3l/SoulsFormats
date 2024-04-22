@@ -1,6 +1,8 @@
-﻿using DotNext.IO.MemoryMappedFiles;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.MemoryMappedFiles;
+using DotNext.IO.MemoryMappedFiles;
 
 namespace SoulsFormats
 {
@@ -53,7 +55,7 @@ namespace SoulsFormats
         /// Indicates presence of filename hash table.
         /// </summary>
         public byte Extended { get; set; }
-
+        
         private IMappedMemoryOwner _mappedMemory = null;
 
         /// <summary>
@@ -116,7 +118,7 @@ namespace SoulsFormats
 
             bnd.Unicode = br.ReadBoolean();
             bnd.Format = Binder.ReadFormat(br, bnd.BitBigEndian);
-            bnd.Extended = br.AssertByte(0, 1, 4, 0x80);
+            bnd.Extended = br.AssertByte([0, 1, 4, 0x80]);
             br.AssertByte(0);
 
             br.AssertInt32(0);
@@ -206,7 +208,7 @@ namespace SoulsFormats
 
             bw.FillInt64("HeadersEnd", bw.Position);
         }
-
+        
         protected override void Dispose(bool disposing)
         {
             _mappedMemory?.Dispose();

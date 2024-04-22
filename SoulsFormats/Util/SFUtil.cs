@@ -313,7 +313,7 @@ namespace SoulsFormats
         public static byte[] ReadZlib(BinaryReaderEx br, int compressedSize)
         {
             br.AssertByte(0x78);
-            br.AssertByte(0x01, 0x5E, 0x9C, 0xDA);
+            br.AssertByte([0x01, 0x5E, 0x9C, 0xDA]);
             byte[] compressed = br.ReadBytes(compressedSize - 2);
 
             using (var decompressedStream = new MemoryStream())
@@ -531,6 +531,20 @@ namespace SoulsFormats
             return BND4.Read(bytes);
         }
 
+        private static readonly byte[] ac6RegulationKey = ParseHexString("10 CE ED 47 7B 7C D9 D7 E6 93 8E 11 47 13 E7 87 D5 39 13 B1 D 31 8E C1 35 E4 BE 50 50 4E E 10");
+
+        /// <summary>
+        /// Decrypts and unpacks ER's regulation BND4 from the specified path.
+        /// </summary>
+        public static BND4 DecryptAC6Regulation(string path)
+        {
+            byte[] bytes = File.ReadAllBytes(path);
+            if (BND4.IsRead(bytes, out BND4 bnd4)) 
+                return bnd4; 
+            bytes = DecryptByteArray(ac6RegulationKey, bytes);
+            return BND4.Read(bytes);
+        }
+
         /// <summary>
         /// Repacks and encrypts ER's regulation BND4 to the specified path.
         /// </summary>
@@ -538,6 +552,17 @@ namespace SoulsFormats
         {
             byte[] bytes = bnd.Write();
             bytes = EncryptByteArray(erRegulationKey, bytes);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, bytes);
+        }
+
+        /// <summary>
+        /// Repacks and encrypts ER's regulation BND4 to the specified path.
+        /// </summary>
+        public static void EncryptAC6Regulation(string path, BND4 bnd)
+        {
+            byte[] bytes = bnd.Write();
+            bytes = EncryptByteArray(ac6RegulationKey, bytes);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllBytes(path, bytes);
         }

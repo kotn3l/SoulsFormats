@@ -9,7 +9,7 @@ namespace SoulsFormats
     /// <summary>
     /// A general-purpose headered file container used in DS2, DS3, and BB. Extensions: .*bhd (header) and .*bdt (data)
     /// </summary>
-    public class BXF4 : IBinder, IBXF4
+    public class BXF4 : MountedSoulsFile<BXF4>, IBinder, IBXF4
     {
         #region Public Is
         /// <summary>
@@ -69,11 +69,11 @@ namespace SoulsFormats
         /// </summary>
         public static BXF4 Read(Memory<byte> bhdBytes, string bdtPath)
         {
-            MemoryMappedFile dataFile = MemoryMappedFile.CreateFromFile(bdtPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
+            using MemoryMappedFile dataFile = MemoryMappedFile.CreateFromFile(bdtPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
             IMappedMemoryOwner fsData = dataFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
             BinaryReaderEx bhdReader = new BinaryReaderEx(false, bhdBytes);
             BinaryReaderEx bdtReader = new BinaryReaderEx(false, fsData.Memory);
-            return new BXF4(bhdReader, bdtReader);
+            return new BXF4(bhdReader, bdtReader) { _mappedMemory2 = fsData };
         }
 
         /// <summary>
@@ -81,11 +81,11 @@ namespace SoulsFormats
         /// </summary>
         public static BXF4 Read(string bhdPath, Memory<byte> bdtBytes)
         {
-            MemoryMappedFile headerFile = MemoryMappedFile.CreateFromFile(bhdPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
+            using MemoryMappedFile headerFile = MemoryMappedFile.CreateFromFile(bhdPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
             IMappedMemoryOwner fsHeader = headerFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
             BinaryReaderEx bhdReader = new BinaryReaderEx(false, fsHeader.Memory);
             BinaryReaderEx bdtReader = new BinaryReaderEx(false, bdtBytes);
-            return new BXF4(bhdReader, bdtReader);
+            return new BXF4(bhdReader, bdtReader) { _mappedMemory1 = fsHeader };
         }
 
         /// <summary>
@@ -93,13 +93,13 @@ namespace SoulsFormats
         /// </summary>
         public static BXF4 Read(string bhdPath, string bdtPath)
         {
-            MemoryMappedFile headerFile = MemoryMappedFile.CreateFromFile(bhdPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read),
+            using MemoryMappedFile headerFile = MemoryMappedFile.CreateFromFile(bhdPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read),
                 dataFile = MemoryMappedFile.CreateFromFile(bdtPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
             IMappedMemoryOwner fsHeader = headerFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read),
                 fsData = dataFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
             BinaryReaderEx bhdReader = new BinaryReaderEx(false, fsHeader.Memory);
             BinaryReaderEx bdtReader = new BinaryReaderEx(false, fsData.Memory);
-            return new BXF4(bhdReader, bdtReader);
+            return new BXF4(bhdReader, bdtReader) { _mappedMemory1 = fsHeader, _mappedMemory2 = fsData };
         }
         #endregion
 
@@ -215,6 +215,11 @@ namespace SoulsFormats
         /// <summary>
         /// Creates an empty BXF4 formatted for DS3.
         /// </summary>
+
+        private IMappedMemoryOwner _mappedMemory => throw new NotSupportedException();
+        private IMappedMemoryOwner _mappedMemory1 = null;
+        private IMappedMemoryOwner _mappedMemory2 = null;
+
         public BXF4()
         {
             Files = new List<BinderFile>();
@@ -265,7 +270,7 @@ namespace SoulsFormats
             br.ReadBoolean(); // BitBigEndian
             br.AssertByte(0);
             br.AssertInt32(0);
-            br.AssertInt64(0x30, 0x40); // Header size, pretty sure 0x40 is just a mistake
+            br.AssertInt64([0x30, 0x40]); // Header size, pretty sure 0x40 is just a mistake
             br.ReadFixStr(8); // Version
             br.AssertInt64(0);
             br.AssertInt64(0);
@@ -295,7 +300,7 @@ namespace SoulsFormats
 
             bxf.Unicode = br.ReadBoolean();
             bxf.Format = Binder.ReadFormat(br, bxf.BitBigEndian);
-            bxf.Extended = br.AssertByte(0, 4);
+            bxf.Extended = br.AssertByte([0, 4]);
             br.AssertByte(0);
 
             if (fileHeaderSize != Binder.GetBND4FileHeaderSize(bxf.Format))
@@ -401,9 +406,12 @@ namespace SoulsFormats
             }
         }
 
-        public void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            
+            _mappedMemory1?.Dispose();
+            _mappedMemory1 = null;
+            _mappedMemory2?.Dispose();
+            _mappedMemory2 = null;
         }
     }
 }

@@ -17,7 +17,7 @@ jobs:
 
     strategy:
       matrix:
-        dotnet-version: [ '6.0.x', '7.0.x' ]
+        dotnet-version: [ '8.0.x' ]
 
     steps:
       - uses: actions/checkout@v3
@@ -31,13 +31,16 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          echo "COMMIT_HASH=$COMMIT_HASH" >> "$GITHUB_ENV"
+          dotnet build --no-restore
 
       - name: Publish Artifact
         id: publish_artifact
         uses: actions/upload-artifact@v2
         with:
-          name: SoulsFormats-kotn3l
+          name: "SoulsFormats-kotn3l-${{ env.COMMIT_HASH }}"
           path: |
             **/bin/**/*.dll
             **/bin/**/*.pdb

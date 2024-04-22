@@ -12,7 +12,7 @@ namespace SoulsFormats
             Circle = 1,
             Sphere = 2,
             Cylinder = 3,
-            Rect = 4,
+            Rectangle = 4,
             Box = 5,
             Composite = 6,
         }
@@ -44,7 +44,7 @@ namespace SoulsFormats
                     case ShapeType.Circle: return new Circle();
                     case ShapeType.Sphere: return new Sphere();
                     case ShapeType.Cylinder: return new Cylinder();
-                    case ShapeType.Rect: return new Rect();
+                    case ShapeType.Rectangle: return new Rectangle();
                     case ShapeType.Box: return new Box();
                     case ShapeType.Composite: return new Composite();
 
@@ -216,9 +216,9 @@ namespace SoulsFormats
             /// <summary>
             /// A flat rectangle.
             /// </summary>
-            public class Rect : Shape
+            public class Rectangle : Shape
             {
-                internal override ShapeType Type => ShapeType.Rect;
+                internal override ShapeType Type => ShapeType.Rectangle;
                 internal override bool HasShapeData => true;
 
                 /// <summary>
@@ -234,12 +234,12 @@ namespace SoulsFormats
                 /// <summary>
                 /// Creates a Rect with default dimensions.
                 /// </summary>
-                public Rect() : this(1, 1) { }
+                public Rectangle() : this(1, 1) { }
 
                 /// <summary>
                 /// Creates a Rect with the given dimensions.
                 /// </summary>
-                public Rect(float width, float depth)
+                public Rectangle(float width, float depth)
                 {
                     Width = width;
                     Depth = depth;
@@ -250,7 +250,7 @@ namespace SoulsFormats
                 /// </summary>
                 public override Shape DeepCopy()
                 {
-                    return new Rect(Width, Depth);
+                    return new Rectangle(Width, Depth);
                 }
 
                 internal override void ReadShapeData(BinaryReaderEx br)
@@ -399,9 +399,10 @@ namespace SoulsFormats
                     private int RegionIndex;
 
                     /// <summary>
-                    /// Unknown.
+                    /// Makes this shape add or subtract the composite region's currently defined shape.
+                    /// 0 = add? 2 = subtract?
                     /// </summary>
-                    public int Unk04 { get; set; }
+                    public int unkShapeSubtractType { get; set; }
 
                     /// <summary>
                     /// Creates a Child with default values.
@@ -411,7 +412,7 @@ namespace SoulsFormats
                     internal Child(BinaryReaderEx br)
                     {
                         RegionIndex = br.ReadInt32();
-                        Unk04 = br.ReadInt32();
+                        unkShapeSubtractType = br.ReadInt32();
                     }
 
                     /// <summary>
@@ -419,13 +420,13 @@ namespace SoulsFormats
                     /// </summary>
                     public Child DeepCopy()
                     {
-                        return new Child() { RegionName = RegionName, Unk04 = Unk04 };
+                        return new Child() { RegionName = RegionName, unkShapeSubtractType = unkShapeSubtractType };
                     }
 
                     internal void Write(BinaryWriterEx bw)
                     {
                         bw.WriteInt32(RegionIndex);
-                        bw.WriteInt32(Unk04);
+                        bw.WriteInt32(unkShapeSubtractType);
                     }
 
                     internal void GetNames<T>(List<T> regions) where T : IMsbRegion

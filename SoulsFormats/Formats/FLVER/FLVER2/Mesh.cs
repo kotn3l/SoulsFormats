@@ -45,7 +45,6 @@ namespace SoulsFormats
             /// <summary>
             /// Vertices in this mesh.
             /// </summary>
-            [HideProperty]
             public FLVER.Vertex[] Vertices { get; set; }
             IReadOnlyList<FLVER.Vertex> IFlverMesh.Vertices => Vertices;
 
@@ -54,7 +53,6 @@ namespace SoulsFormats
             /// <summary>
             /// Optional bounding box struct; may be null.
             /// </summary>
-            [HideProperty]
             public BoundingBoxes BoundingBox { get; set; }
 
             private int[] faceSetIndices, vertexBufferIndices;
@@ -73,7 +71,7 @@ namespace SoulsFormats
 
             internal Mesh(BinaryReaderEx br, FLVER2Header header)
             {
-                Dynamic = br.AssertByte(0, 1);
+                Dynamic = br.AssertByte([0, 1]);
                 br.AssertByte(0);
                 br.AssertByte(0);
                 br.AssertByte(0);
@@ -87,7 +85,7 @@ namespace SoulsFormats
                 int boneOffset = br.ReadInt32();
                 int faceSetCount = br.ReadInt32();
                 int faceSetOffset = br.ReadInt32();
-                int vertexBufferCount = br.AssertInt32(1, 2, 3);
+                int vertexBufferCount = br.AssertInt32([1, 2, 3]);
                 int vertexBufferOffset = br.ReadInt32();
 
                 if (boundingBoxOffset != 0)

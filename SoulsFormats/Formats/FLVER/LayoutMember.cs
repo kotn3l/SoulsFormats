@@ -12,12 +12,8 @@ namespace SoulsFormats
             /// <summary>
             /// Unknown; 0, 1, or 2.
             /// </summary>
-            public short Unk00 { get; set; }
+            public int Unk00 { get; set; }
 
-            /// <summary>
-            /// Unknown; 0, or 32768.
-            /// </summary>
-            public char Unk02 { get; set; }
             /// <summary>
             /// Format used to store this member.
             /// </summary>
@@ -51,7 +47,6 @@ namespace SoulsFormats
                         case LayoutType.Byte4C:
                         case LayoutType.UV:
                         case LayoutType.Byte4E:
-                        case LayoutType.Unk2D:
                             return 4;
 
                         case LayoutType.Float2:
@@ -67,6 +62,9 @@ namespace SoulsFormats
                         case LayoutType.Float4:
                             return 16;
 
+                        case LayoutType.Unknown:
+                            return 4;
+
                         default:
                             throw new NotImplementedException($"No size defined for buffer layout type: {Type}");
                     }
@@ -76,7 +74,7 @@ namespace SoulsFormats
             /// <summary>
             /// Creates a LayoutMember with the specified values.
             /// </summary>
-            public LayoutMember(LayoutType type, LayoutSemantic semantic, int index = 0, byte unk00 = 0)
+            public LayoutMember(LayoutType type, LayoutSemantic semantic, int index = 0, int unk00 = 0)
             {
                 Unk00 = unk00;
                 Type = type;
@@ -86,8 +84,7 @@ namespace SoulsFormats
 
             internal LayoutMember(BinaryReaderEx br, int structOffset)
             {
-                Unk00 = br.ReadInt16();
-                Unk02 = (char)br.ReadInt16();
+                Unk00 = br.ReadInt32();
                 br.AssertInt32(structOffset);
                 Type = br.ReadEnum32<LayoutType>();
                 Semantic = br.ReadEnum32<LayoutSemantic>();
@@ -96,8 +93,7 @@ namespace SoulsFormats
 
             internal void Write(BinaryWriterEx bw, int structOffset)
             {
-                bw.WriteInt16(Unk00);
-                bw.WriteInt16((short)Unk02);
+                bw.WriteInt32(Unk00);
                 bw.WriteInt32(structOffset);
                 bw.WriteUInt32((uint)Type);
                 bw.WriteUInt32((uint)Semantic);
@@ -175,7 +171,7 @@ namespace SoulsFormats
             /// <summary>
             /// Unknown.
             /// </summary>
-            Unk2D = 0x2D,
+            Unknown = 0x2D,
 
             /// <summary>
             /// Unknown.

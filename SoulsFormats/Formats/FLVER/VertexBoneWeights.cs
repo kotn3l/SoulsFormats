@@ -59,20 +59,52 @@ namespace SoulsFormats
                 {
                     //while (Sum < 1)
                     {
+                        float s = Sum;
                         for (int i = 0; i < this.Length; i++)
                         {
-                            this[i] = ((this[i] / Sum) * 1f);
+                            this[i] = ((this[i] / s)); 
                         }
-                        
                     }
                     float difference = 1f - Sum;
-                    for (int i = 0; i < this.Length; i++)
+                    if (difference != 0f && Sum != 1f)
                     {
-                        this[i] += ((this[i] / Sum) * difference);
-                    }
-                    if (Sum > 1)
-                    {
-                        ;
+                        /*for (int i = 0; i < this.Length; i++)
+                        {
+                            this[i] += ((this[i] / Sum) * (difference / (float)this.Length));
+                        }*/
+                        if (Math.Abs(Sum - 1) > 0.00001f) // adjust tolerance as needed
+                        {
+                            float diff = 1 - Sum;
+                            for (int i = 0; i < this.Length; i++)
+                            {
+                                this[i] = (float)Math.Round(this[i] + (difference / this.Length), 6);
+                            }
+                        }
+                        else
+                        {
+                            for (int i = 0; i < this.Length; i++)
+                            {
+                                this[i] = (float)Math.Round(this[i], 6);
+                            }
+                        }
+                        if (Sum != 1f)
+                        {
+                            /*float diff = 1 - Sum;
+                            int max = 0;
+                            for (int i = 0; i < this.Length; i++)
+                            {
+                                if (this[i] > this[max])
+                                {
+                                    max = i;
+                                }
+                            }
+                            this[max] += diff;*/
+                            float s = Sum;
+                            for (int i = 0; i < this.Length; i++)
+                            {
+                                this[i] = ((this[i] / s));
+                            }
+                        }
                     }
                     /*float difference = 1f - Sum;
                     for (int i = 0; i < this.Length; i++)
@@ -112,19 +144,36 @@ namespace SoulsFormats
             {
                 if(Sum < 1)
                 {
-                    float d2 = 1f - Sum;
-                    int max = 0;
-                    int max2 = 0;
-                    int max3 = 0;
+                    /*double difference = 1d - SumD;
+                    bool[] add = new bool[this.Length];
+                    int count = 0;
                     for (int i = 0; i < this.Length; i++)
                     {
-                        if (this[i] > this[max])
+                        if (this[i] == 0)
                         {
-                            max = i;
+                            add[i] = false;
+                        }
+                        else
+                        {
+                            add[i] = true;
+                            count++;
                         }
                     }
-                    this[max] += d2 / 2f;
-                    ;
+                    double toAdd = difference / (double)count;
+                    for (int i = 0; i < this.Length; i++)
+                    {
+                        if (add[i])
+                        {
+                            this[i] += (float)toAdd;
+                        }
+                    }*/
+                    //this[max] += difference;
+
+                    if (Sum != 1)
+                    {
+                        ;                   
+                        //this[max] += d1;
+                    }
                 }
             }
         }

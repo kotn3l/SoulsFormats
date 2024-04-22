@@ -37,17 +37,20 @@ namespace SoulsFormats
             /// <summary>
             /// Translation of this bone.
             /// </summary>
+            [PositionProperty]
             public Vector3 Position { get; set; }
 
             /// <summary>
             /// Rotation of this bone; euler radians.
             /// </summary>
             [RotationRadians]
+            [RotationProperty]
             public Vector3 Rotation { get; set; }
 
             /// <summary>
             /// Scale of this bone.
             /// </summary>
+            [ScaleProperty]
             public Vector3 Scale { get; set; }
 
             /// <summary>

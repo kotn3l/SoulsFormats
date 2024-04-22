@@ -223,14 +223,16 @@ namespace SoulsFormats
             /// </summary>
             [MSBReference(ReferenceType = typeof(Part))]
             public string PartName { get; set; }
-            private int PartIndex;
+            [IndexProperty]
+            public int PartIndex { get; set; }
 
             /// <summary>
             /// Region referenced by the event.
             /// </summary>
             [MSBReference(ReferenceType = typeof(Region))]
             public string RegionName { get; set; }
-            private int RegionIndex;
+            [IndexProperty]
+            public int RegionIndex { get; set; }
 
             /// <summary>
             /// Identifies the event in external files.
@@ -325,8 +327,8 @@ namespace SoulsFormats
 
             internal virtual void GetIndices(MSB1 msb, Entries entries)
             {
-                PartIndex = MSB.FindIndex(entries.Parts, PartName);
-                RegionIndex = MSB.FindIndex(entries.Regions, RegionName);
+                PartIndex = MSB.FindIndex(this, entries.Parts, PartName);
+                RegionIndex = MSB.FindIndex(this, entries.Regions, RegionName);
             }
 
             /// <summary>
@@ -553,7 +555,8 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
                 public string TreasurePartName { get; set; }
-                private int TreasurePartIndex;
+                [IndexProperty]
+                public int TreasurePartIndex { get; set; }
 
                 /// <summary>
                 /// Item lots to be granted when the treasure is picked up; only the first appears to be functional.
@@ -625,7 +628,7 @@ namespace SoulsFormats
                 internal override void GetIndices(MSB1 msb, Entries entries)
                 {
                     base.GetIndices(msb, entries);
-                    TreasurePartIndex = MSB.FindIndex(entries.Parts, TreasurePartName);
+                    TreasurePartIndex = MSB.FindIndex(this, entries.Parts, TreasurePartName);
                 }
             }
 
@@ -680,15 +683,17 @@ namespace SoulsFormats
                 /// Points that enemies may be spawned at.
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Region))]
-                public string[] SpawnPointNames { get; private set; }
-                private int[] SpawnPointIndices;
+                public string[] SpawnPointNames { get; set; }
+                [IndexProperty]
+                public int[] SpawnPointIndices { get; set; }
 
                 /// <summary>
                 /// Enemies to be respawned.
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
-                public string[] SpawnPartNames { get; private set; }
-                private int[] SpawnPartIndices;
+                public string[] SpawnPartNames { get; set; }
+                [IndexProperty]
+                public int[] SpawnPartIndices { get; set; }
 
                 /// <summary>
                 /// Creates a Generator with default values.
@@ -750,8 +755,8 @@ namespace SoulsFormats
                 internal override void GetIndices(MSB1 msb, Entries entries)
                 {
                     base.GetIndices(msb, entries);
-                    SpawnPointIndices = MSB.FindIndices(entries.Regions, SpawnPointNames);
-                    SpawnPartIndices = MSB.FindIndices(entries.Parts, SpawnPartNames);
+                    SpawnPointIndices = MSB.FindIndices(this, entries.Regions, SpawnPointNames);
+                    SpawnPartIndices = MSB.FindIndices(this, entries.Parts, SpawnPartNames);
                 }
             }
 
@@ -832,7 +837,8 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
                 public string ObjActPartName { get; set; }
-                private int ObjActPartIndex;
+                [IndexProperty]
+                public int ObjActPartIndex { get; set; }
 
                 /// <summary>
                 /// ID in ObjActParam that configures the ObjAct.
@@ -843,7 +849,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown.
                 /// </summary>
-                public StateType ObjActState { get; set; }
+                public StateType ObjActState { get; set; } = StateType.Default;
 
                 /// <summary>
                 /// Unknown, probably enables or disables the ObjAct.
@@ -891,7 +897,7 @@ namespace SoulsFormats
                 internal override void GetIndices(MSB1 msb, Entries entries)
                 {
                     base.GetIndices(msb, entries);
-                    ObjActPartIndex = MSB.FindIndex(entries.Parts, ObjActPartName);
+                    ObjActPartIndex = MSB.FindIndex(this, entries.Parts, ObjActPartName);
                 }
             }
 
@@ -907,7 +913,8 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Region))]
                 public string SpawnPointName { get; set; }
-                private int SpawnPointIndex;
+                [IndexProperty]
+                public int SpawnPointIndex { get; set; }
 
                 /// <summary>
                 /// Creates a SpawnPoint with default values.
@@ -941,7 +948,7 @@ namespace SoulsFormats
                 internal override void GetIndices(MSB1 msb, Entries entries)
                 {
                     base.GetIndices(msb, entries);
-                    SpawnPointIndex = MSB.FindIndex(entries.Regions, SpawnPointName);
+                    SpawnPointIndex = MSB.FindIndex(this, entries.Regions, SpawnPointName);
                 }
             }
 
@@ -955,6 +962,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// Position of the map.
                 /// </summary>
+                [PositionProperty]
                 public Vector3 Position { get; set; }
 
                 /// <summary>
@@ -994,7 +1002,8 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Region))]
                 public string NavmeshRegionName { get; set; }
-                private int NavmeshRegionIndex;
+                [IndexProperty]
+                public int NavmeshRegionIndex { get; set; }
 
                 /// <summary>
                 /// Creates a Navmesh with default values.
@@ -1028,7 +1037,7 @@ namespace SoulsFormats
                 internal override void GetIndices(MSB1 msb, Entries entries)
                 {
                     base.GetIndices(msb, entries);
-                    NavmeshRegionIndex = MSB.FindIndex(entries.Regions, NavmeshRegionName);
+                    NavmeshRegionIndex = MSB.FindIndex(this, entries.Regions, NavmeshRegionName);
                 }
             }
 

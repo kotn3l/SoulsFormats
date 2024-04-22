@@ -16,6 +16,8 @@ namespace SoulsFormats
     /// </summary>
     public sealed class BinaryReaderEx
     {
+        public static bool IsFlexible { get; set; }
+
         private Stack<long> _steps;
         private Memory<byte> _memory;
 
@@ -62,12 +64,6 @@ namespace SoulsFormats
         public unsafe T[] ReadMulti<T>(int count) where T : unmanaged
         {
             var ret = _memory.Span.Slice((int)Position, sizeof(T) * count).Cast<byte, T>().ToArray();
-            Position += sizeof(T) * count;
-            return ret;
-        }
-        public unsafe Span<T> ReadMultiSpan<T>(int count) where T : unmanaged
-        {
-            var ret = _memory.Span.Slice((int)Position, sizeof(T) * count).Cast<byte, T>();
             Position += sizeof(T) * count;
             return ret;
         }
@@ -121,14 +117,29 @@ namespace SoulsFormats
         /// <summary>
         /// Compares a value to a list of options, returning it if found or excepting if not.
         /// </summary>
-        private T AssertValue<T>(T value, string typeName, string valueFormat, T[] options) where T : IEquatable<T>
+        private T AssertValue<T>(T value, string typeName, string valueFormat, T option) where T : IEquatable<T>
+        {
+            if (IsFlexible) return value;
+
+            if (value.Equals(option))
+                return value;
+
+            string strValue = string.Format(valueFormat, value);
+            string strOptions = string.Join(", ", string.Format(valueFormat, option));
+            throw new InvalidDataException($"Read {typeName}: {strValue} | Expected: {strOptions} | Ending position: 0x{Position:X}");
+        }
+        
+        /// <summary>
+        /// Compares a value to a list of options, returning it if found or excepting if not.
+        /// </summary>
+        private T AssertValue<T>(T value, string typeName, string valueFormat, ReadOnlySpan<T> options) where T : IEquatable<T>
         {
             foreach (T option in options)
                 if (value.Equals(option))
                     return value;
 
             string strValue = string.Format(valueFormat, value);
-            string strOptions = string.Join(", ", options.Select(o => string.Format(valueFormat, o)));
+            string strOptions = string.Join(", ", options.ToArray().Select(o => string.Format(valueFormat, o)));
             throw new InvalidDataException($"Read {typeName}: {strValue} | Expected: {strOptions} | Ending position: 0x{Position:X}");
         }
 
@@ -227,7 +238,7 @@ namespace SoulsFormats
         /// </summary>
         public bool AssertBoolean(bool option)
         {
-            return AssertValue(ReadBoolean(), "Boolean", "{0}", new bool[] { option });
+            return AssertValue(ReadBoolean(), "Boolean", "{0}", [option]);
         }
         #endregion
 
@@ -270,7 +281,15 @@ namespace SoulsFormats
         /// <summary>
         /// Reads a one-byte signed integer and throws an exception if it does not match any of the specified options.
         /// </summary>
-        public sbyte AssertSByte(params sbyte[] options)
+        public sbyte AssertSByte(sbyte option)
+        {
+            return AssertValue(ReadSByte(), "SByte", "0x{0:X}", option);
+        }
+        
+        /// <summary>
+        /// Reads a one-byte signed integer and throws an exception if it does not match any of the specified options.
+        /// </summary>
+        public sbyte AssertSByte(ReadOnlySpan<sbyte> options)
         {
             return AssertValue(ReadSByte(), "SByte", "0x{0:X}", options);
         }
@@ -291,14 +310,6 @@ namespace SoulsFormats
         public byte[] ReadBytes(int count)
         {
             return ReadMulti<byte>(count);
-        }
-
-        /// <summary>
-        /// Reads an array of one-byte unsigned integers.
-        /// </summary>
-        public Span<byte> ReadBytesSpan(int count)
-        {
-            return ReadMultiSpan<byte>(count);
         }
 
         /// <summary>
@@ -327,13 +338,6 @@ namespace SoulsFormats
             StepOut();
             return result;
         }
-        public Span<byte> GetBytesSpan(long offset, int count)
-        {
-            StepIn(offset);
-            Span<byte> result = ReadBytesSpan(count);
-            StepOut();
-            return result;
-        }
 
         /// <summary>
         /// Reads the specified number of bytes from the offset into the buffer starting at the specified index without advancing the stream.
@@ -348,7 +352,15 @@ namespace SoulsFormats
         /// <summary>
         /// Reads a one-byte unsigned integer and throws an exception if it does not match any of the specified options.
         /// </summary>
-        public byte AssertByte(params byte[] options)
+        public byte AssertByte(byte option)
+        {
+            return AssertValue(ReadByte(), "Byte", "0x{0:X}", option);
+        }
+        
+        /// <summary>
+        /// Reads a one-byte unsigned integer and throws an exception if it does not match any of the specified options.
+        /// </summary>
+        public byte AssertByte(ReadOnlySpan<byte> options)
         {
             return AssertValue(ReadByte(), "Byte", "0x{0:X}", options);
         }
@@ -399,7 +411,15 @@ namespace SoulsFormats
         /// <summary>
         /// Reads a two-byte signed integer and throws an exception if it does not match any of the specified options.
         /// </summary>
-        public short AssertInt16(params short[] options)
+        public short AssertInt16(short option)
+        {
+            return AssertValue(ReadInt16(), "Int16", "0x{0:X}", option);
+        }
+        
+        /// <summary>
+        /// Reads a two-byte signed integer and throws an exception if it does not match any of the specified options.
+        /// </summary>
+        public short AssertInt16(ReadOnlySpan<short> options)
         {
             return AssertValue(ReadInt16(), "Int16", "0x{0:X}", options);
         }
@@ -449,7 +469,15 @@ namespace SoulsFormats
         /// <summary>
         /// Reads a two-byte unsigned integer and throws an exception if it does not match any of the specified options.
         /// </summary>
-        public ushort AssertUInt16(params ushort[] options)
+        public ushort AssertUInt16(ushort option)
+        {
+            return AssertValue(ReadUInt16(), "UInt16", "0x{0:X}", option);
+        }
+        
+        /// <summary>
+        /// Reads a two-byte unsigned integer and throws an exception if it does not match any of the specified options.
+        /// </summary>
+        public ushort AssertUInt16(ReadOnlySpan<ushort> options)
         {
             return AssertValue(ReadUInt16(), "UInt16", "0x{0:X}", options);
         }
@@ -499,7 +527,15 @@ namespace SoulsFormats
         /// <summary>
         /// Reads a four-byte signed integer and throws an exception if it does not match any of the specified options.
         /// </summary>
-        public int AssertInt32(params int[] options)
+        public int AssertInt32(int option)
+        {
+            return AssertValue(ReadInt32(), "Int32", "0x{0:X}", option);
+        }
+        
+        /// <summary>
+        /// Reads a four-byte signed integer and throws an exception if it does not match any of the specified options.
+        /// </summary>
+        public int AssertInt32(ReadOnlySpan<int> options)
         {
             return AssertValue(ReadInt32(), "Int32", "0x{0:X}", options);
         }
@@ -545,11 +581,19 @@ namespace SoulsFormats
         {
             return GetValues(ReadUInt32s, offset, count);
         }
+        
+        /// <summary>
+        /// Reads a four-byte unsigned integer and throws an exception if it does not match any of the specified options.
+        /// </summary>
+        public uint AssertUInt32(uint option)
+        {
+            return AssertValue(ReadUInt32(), "UInt32", "0x{0:X}", option);
+        }
 
         /// <summary>
         /// Reads a four-byte unsigned integer and throws an exception if it does not match any of the specified options.
         /// </summary>
-        public uint AssertUInt32(params uint[] options)
+        public uint AssertUInt32(ReadOnlySpan<uint> options)
         {
             return AssertValue(ReadUInt32(), "UInt32", "0x{0:X}", options);
         }
@@ -595,11 +639,19 @@ namespace SoulsFormats
         {
             return GetValues(ReadInt64s, offset, count);
         }
+        
+        /// <summary>
+        /// Reads an eight-byte signed integer and throws an exception if it does not match any of the specified options.
+        /// </summary>
+        public long AssertInt64(long option)
+        {
+            return AssertValue(ReadInt64(), "Int64", "0x{0:X}", option);
+        }
 
         /// <summary>
         /// Reads an eight-byte signed integer and throws an exception if it does not match any of the specified options.
         /// </summary>
-        public long AssertInt64(params long[] options)
+        public long AssertInt64(ReadOnlySpan<long> options)
         {
             return AssertValue(ReadInt64(), "Int64", "0x{0:X}", options);
         }
@@ -649,7 +701,15 @@ namespace SoulsFormats
         /// <summary>
         /// Reads an eight-byte unsigned integer and throws an exception if it does not match any of the specified options.
         /// </summary>
-        public ulong AssertUInt64(params ulong[] options)
+        public ulong AssertUInt64(ulong option)
+        {
+            return AssertValue(ReadUInt64(), "UInt64", "0x{0:X}", option);
+        }
+        
+        /// <summary>
+        /// Reads an eight-byte unsigned integer and throws an exception if it does not match any of the specified options.
+        /// </summary>
+        public ulong AssertUInt64(ReadOnlySpan<ulong> options)
         {
             return AssertValue(ReadUInt64(), "UInt64", "0x{0:X}", options);
         }
@@ -705,7 +765,15 @@ namespace SoulsFormats
         /// <summary>
         /// Reads either a four or eight-byte signed integer depending on VarintLong and throws an exception if it does not match any of the specified options.
         /// </summary>
-        public long AssertVarint(params long[] options)
+        public long AssertVarint(long option)
+        {
+            return AssertValue(ReadVarint(), VarintLong ? "Varint64" : "Varint32", "0x{0:X}", option);
+        }
+        
+        /// <summary>
+        /// Reads either a four or eight-byte signed integer depending on VarintLong and throws an exception if it does not match any of the specified options.
+        /// </summary>
+        public long AssertVarint(ReadOnlySpan<long> options)
         {
             return AssertValue(ReadVarint(), VarintLong ? "Varint64" : "Varint32", "0x{0:X}", options);
         }
@@ -751,11 +819,19 @@ namespace SoulsFormats
         {
             return GetValues(ReadSingles, offset, count);
         }
+        
+        /// <summary>
+        /// Reads a four-byte floating point number and throws an exception if it does not match any of the specified options.
+        /// </summary>
+        public float AssertSingle(float option)
+        {
+            return AssertValue(ReadSingle(), "Single", "{0}", option);
+        }
 
         /// <summary>
         /// Reads a four-byte floating point number and throws an exception if it does not match any of the specified options.
         /// </summary>
-        public float AssertSingle(params float[] options)
+        public float AssertSingle(ReadOnlySpan<float> options)
         {
             return AssertValue(ReadSingle(), "Single", "{0}", options);
         }
@@ -801,11 +877,19 @@ namespace SoulsFormats
         {
             return GetValues(ReadDoubles, offset, count);
         }
+        
+        /// <summary>
+        /// Reads an eight-byte floating point number and throws an exception if it does not match any of the specified options.
+        /// </summary>
+        public double AssertDouble(double option)
+        {
+            return AssertValue(ReadDouble(), "Double", "{0}", option);
+        }
 
         /// <summary>
         /// Reads an eight-byte floating point number and throws an exception if it does not match any of the specified options.
         /// </summary>
-        public double AssertDouble(params double[] options)
+        public double AssertDouble(ReadOnlySpan<double> options)
         {
             return AssertValue(ReadDouble(), "Double", "{0}", options);
         }
@@ -829,9 +913,13 @@ namespace SoulsFormats
         /// </summary>
         public TEnum ReadEnum8<TEnum>() where TEnum : Enum
         {
-            return ReadEnum<TEnum, byte>(ReadByte, "0x{0:X}");
+            Type typ = Enum.GetUnderlyingType(typeof(TEnum));
+            if (typ == typeof(byte))
+                return ReadEnum<TEnum, byte>(ReadByte, "0x{0:X}");
+            if (typ == typeof(sbyte))
+                return ReadEnum<TEnum, sbyte>(ReadSByte, "0x{0:X}");
+            throw new InvalidDataException($"Enum {typeof(TEnum).Name} has an invalid underlying value type: {typ.Name}");
         }
-
 
         /// <summary>
         /// Reads a one-byte enum from the specified position without advancing the stream.
@@ -849,7 +937,12 @@ namespace SoulsFormats
         /// </summary>
         public TEnum ReadEnum16<TEnum>() where TEnum : Enum
         {
-            return ReadEnum<TEnum, ushort>(ReadUInt16, "0x{0:X}");
+            Type typ = Enum.GetUnderlyingType(typeof(TEnum));
+            if (typ == typeof(short))
+                return ReadEnum<TEnum, short>(ReadInt16, "0x{0:X}");
+            if (typ == typeof(ushort))
+                return ReadEnum<TEnum, ushort>(ReadUInt16, "0x{0:X}");
+            throw new InvalidDataException($"Enum {typeof(TEnum).Name} has an invalid underlying value type: {typ.Name}");
         }
 
         /// <summary>
@@ -868,7 +961,12 @@ namespace SoulsFormats
         /// </summary>
         public TEnum ReadEnum32<TEnum>() where TEnum : Enum
         {
-            return ReadEnum<TEnum, uint>(ReadUInt32, "0x{0:X}");
+            Type typ = Enum.GetUnderlyingType(typeof(TEnum));
+            if (typ == typeof(int))
+                return ReadEnum<TEnum, int>(ReadInt32, "0x{0:X}");
+            if (typ == typeof(uint))
+                return ReadEnum<TEnum, uint>(ReadUInt32, "0x{0:X}");
+            throw new InvalidDataException($"Enum {typeof(TEnum).Name} has an invalid underlying value type: {typ.Name}");
         }
 
         /// <summary>
@@ -887,7 +985,12 @@ namespace SoulsFormats
         /// </summary>
         public TEnum ReadEnum64<TEnum>() where TEnum : Enum
         {
-            return ReadEnum<TEnum, ulong>(ReadUInt64, "0x{0:X}");
+            Type typ = Enum.GetUnderlyingType(typeof(TEnum));
+            if (typ == typeof(long))
+                return ReadEnum<TEnum, long>(ReadInt64, "0x{0:X}");
+            if (typ == typeof(ulong))
+                return ReadEnum<TEnum, ulong>(ReadUInt64, "0x{0:X}");
+            throw new InvalidDataException($"Enum {typeof(TEnum).Name} has an invalid underlying value type: {typ.Name}");
         }
 
         /// <summary>
@@ -970,7 +1073,21 @@ namespace SoulsFormats
         /// <summary>
         /// Reads as many ASCII characters as are in the specified value and throws an exception if they do not match.
         /// </summary>
-        public string AssertASCII(params string[] values)
+        public string AssertASCII(string value)
+        {
+            string s = ReadASCII(value.Length);
+
+            if (s != value)
+                throw new InvalidDataException(string.Format(
+                    "Read ASCII: {0} | Expected ASCII: {1}", s, value));
+
+            return s;
+        }
+        
+        /// <summary>
+        /// Reads as many ASCII characters as are in the specified value and throws an exception if they do not match.
+        /// </summary>
+        public string AssertASCII(ReadOnlySpan<string> values)
         {
             string s = ReadASCII(values[0].Length);
             bool valid = false;
@@ -980,7 +1097,7 @@ namespace SoulsFormats
 
             if (!valid)
                 throw new InvalidDataException(string.Format(
-                    "Read ASCII: {0} | Expected ASCII: {1}", s, string.Join(", ", values)));
+                    "Read ASCII: {0} | Expected ASCII: {1}", s, string.Join(", ", values.ToArray())));
 
             return s;
         }
