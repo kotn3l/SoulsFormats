@@ -64,13 +64,13 @@ namespace SoulsFormats
             /// </summary>
             public short Unk06 { get; set; }
 
-            [HideProperty]
+            [IndexProperty]
             public int IndicesCount { get; set; }
 
             /// <summary>
             /// Indices to vertices in a mesh.
             /// </summary>
-            [HideProperty]
+            [IndexProperty]
             public int[] Indices { get; set; }
 
             /// <summary>
@@ -110,7 +110,7 @@ namespace SoulsFormats
                 {
                     br.ReadInt32(); // Indices length
                     br.AssertInt32(0);
-                    indexSize = br.AssertInt32(0, 16, 32);
+                    indexSize = br.AssertInt32([0, 16, 32]);
                     br.AssertInt32(0);
                 }
 

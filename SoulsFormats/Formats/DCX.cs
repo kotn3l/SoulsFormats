@@ -15,11 +15,8 @@ namespace SoulsFormats
         {
             if (br.Length < 4)
                 return false;
-
-            byte b0 = br.GetByte(0);
-            byte b1 = br.GetByte(1);
             string magic = br.GetASCII(0, 4);
-            return magic == "DCP\0" || magic == "DCX\0" || b0 == 0x78 && (b1 == 0x01 || b1 == 0x5E || b1 == 0x9C || b1 == 0xDA);
+            return magic == "DCP\0" || magic == "DCX\0";
         }
 
         /// <summary>
@@ -86,10 +83,9 @@ namespace SoulsFormats
             type = Type.Unknown;
 
             string magic = br.ReadASCII(4);
-            string format;
             if (magic == "DCP\0")
             {
-                format = br.GetASCII(4, 4);
+                string format = br.GetASCII(4, 4);
                 if (format == "DFLT")
                 {
                     type = Type.DCP_DFLT;
@@ -101,7 +97,7 @@ namespace SoulsFormats
             }
             else if (magic == "DCX\0")
             {
-                format = br.GetASCII(0x28, 4);
+                string format = br.GetASCII(0x28, 4);
                 if (format == "EDGE")
                 {
                     type = Type.DCX_EDGE;
@@ -112,6 +108,9 @@ namespace SoulsFormats
                     int unk10 = br.GetInt32(0x10);
                     byte unk30 = br.GetByte(0x30);
                     byte unk38 = br.GetByte(0x38);
+
+                    if (BinaryReaderEx.IsFlexible && unk04 != 0x11000)
+                        unk04 = 0x10000;
 
                     if (unk04 == 0x10000 && unk10 == 0x24 && unk30 == 9 && unk38 == 0)
                         type = Type.DCX_DFLT_10000_24_9;
@@ -126,7 +125,7 @@ namespace SoulsFormats
                 }
                 else if (format == "KRAK")
                 {
-                    byte compressionLevel = br.GetByte(0x30);
+                    int compressionLevel = br.GetByte(0x30);
                     type = compressionLevel == 9 ? Type.DCX_KRAK_MAX : Type.DCX_KRAK;
                 }
             }
@@ -158,7 +157,7 @@ namespace SoulsFormats
             else if (type == Type.DCX_KRAK)
                 return DecompressDCXKRAK(br);
             else if (type == Type.DCX_KRAK_MAX)
-                return DecompressDCXKRAK(br, true);
+                return DecompressDCXKRAK(br, 9);
             else
                 throw new FormatException("Unknown DCX format.");
         }
@@ -227,7 +226,7 @@ namespace SoulsFormats
                     br.AssertInt32(0);
                     int offset = br.ReadInt32();
                     int size = br.ReadInt32();
-                    bool compressed = br.AssertInt32(0, 1) == 1;
+                    bool compressed = br.AssertInt32([0, 1]) == 1;
 
                     byte[] chunk = br.GetBytes(dataStart + offset, size);
 
@@ -279,7 +278,7 @@ namespace SoulsFormats
             br.AssertInt32(0x10);
             br.AssertInt32(0x10000);
             // Uncompressed size of last block
-            int trailingUncompressedSize = br.AssertInt32(uncompressedSize % 0x10000, 0x10000);
+            int trailingUncompressedSize = br.AssertInt32([uncompressedSize % 0x10000, 0x10000]);
             int egdtSize = br.ReadInt32();
             int chunkCount = br.ReadInt32();
             br.AssertInt32(0x100000);
@@ -298,7 +297,7 @@ namespace SoulsFormats
                     br.AssertInt32(0);
                     int offset = br.ReadInt32();
                     int size = br.ReadInt32();
-                    bool compressed = br.AssertInt32(0, 1) == 1;
+                    bool compressed = br.AssertInt32([0, 1]) == 1;
 
                     byte[] chunk = br.GetBytes(dcaStart + dcaSize + offset, size);
 
@@ -359,7 +358,7 @@ namespace SoulsFormats
             return SFUtil.ReadZlib(br, compressedSize);
         }
 
-        private static Memory<byte> DecompressDCXKRAK(BinaryReaderEx br, bool maxCompression = false)
+        private static Memory<byte> DecompressDCXKRAK(BinaryReaderEx br, byte compressionLevel = 6)
         {
             br.AssertASCII("DCX\0");
             br.AssertInt32(0x11000);
@@ -373,7 +372,7 @@ namespace SoulsFormats
             br.AssertASCII("DCP\0");
             br.AssertASCII("KRAK");
             br.AssertInt32(0x20);
-            br.AssertByte(maxCompression ? (byte)9 : (byte)6);
+            br.AssertByte(compressionLevel);
             br.AssertByte(0);
             br.AssertByte(0);
             br.AssertByte(0);
@@ -385,7 +384,8 @@ namespace SoulsFormats
             br.AssertInt32(8);
 
             var compressed = br.ReadSpanView<byte>((int)compressedSize);
-            return Oodle26.Decompress(compressed, uncompressedSize);
+
+            return Oodle.GetOodleCompressor(compressionLevel).Decompress(compressed, uncompressedSize);
         }
 
         #region Public Compress
@@ -431,7 +431,7 @@ namespace SoulsFormats
             else if (type == Type.DCX_KRAK)
                 CompressDCXKRAK(data, bw);
             else if (type == Type.DCX_KRAK_MAX)
-                CompressDCXKRAK(data, bw, true);
+                CompressDCXKRAK(data, bw, 9);
             else if (type == Type.Unknown)
                 throw new ArgumentException("You cannot compress a DCX with an unknown type.");
             else
@@ -618,9 +618,9 @@ namespace SoulsFormats
             bw.FillInt32("CompressedSize", (int)(bw.Position - compressedStart));
         }
 
-        private static void CompressDCXKRAK(Span<byte> data, BinaryWriterEx bw, bool maxCompression = false)
+        private static void CompressDCXKRAK(Span<byte> data, BinaryWriterEx bw, byte compressionLevel = 6)
         {
-            byte[] compressed = Oodle26.Compress(data, Oodle26.OodleLZ_Compressor.OodleLZ_Compressor_Kraken, maxCompression ? Oodle26.OodleLZ_CompressionLevel.OodleLZ_CompressionLevel_Optimal5 : Oodle26.OodleLZ_CompressionLevel.OodleLZ_CompressionLevel_Optimal2);
+            byte[] compressed = Oodle.GetOodleCompressor(compressionLevel).Compress(data, Oodle.OodleLZ_Compressor.OodleLZ_Compressor_Kraken, Oodle.OodleLZ_CompressionLevel.OodleLZ_CompressionLevel_Optimal2);
 
             bw.WriteASCII("DCX\0");
             bw.WriteInt32(0x11000);
@@ -634,7 +634,7 @@ namespace SoulsFormats
             bw.WriteASCII("DCP\0");
             bw.WriteASCII("KRAK");
             bw.WriteInt32(0x20);
-            bw.WriteByte(maxCompression ? (byte)9 : (byte)6);
+            bw.WriteByte(compressionLevel);
             bw.WriteByte(0);
             bw.WriteByte(0);
             bw.WriteByte(0);
@@ -760,9 +760,9 @@ namespace SoulsFormats
             EldenRing = Type.DCX_KRAK,
 
             /// <summary>
-            /// Most common compression format for Armored Core 6.
+            /// Most common compression format for Armored Core VI.
             /// </summary>
-            ArmoredCore6 = Type.DCX_KRAK_MAX
+            AC6 = Type.DCX_KRAK_MAX,
         }
     }
 }

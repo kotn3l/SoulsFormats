@@ -2,7 +2,7 @@
 
 namespace SoulsFormats
 {
-    public static class SFEncoding
+    internal static class SFEncoding
     {
         public static readonly Encoding ASCII;
 

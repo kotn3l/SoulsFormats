@@ -183,14 +183,16 @@ namespace SoulsFormats
             /// </summary>
             [MSBReference(ReferenceType = typeof(Part))]
             public string PartName { get; set; }
-            private int PartIndex;
+            [IndexProperty]
+            public int PartIndex { get; set; }
 
             /// <summary>
             /// The name of a region the event is attached to.
             /// </summary>
             [MSBReference(ReferenceType = typeof(Region))]
             public string PointName { get; set; }
-            private int PointIndex;
+            [IndexProperty]
+            public int PointIndex { get; set; }
 
             /// <summary>
             /// Used to identify the event in event scripts.
@@ -287,8 +289,8 @@ namespace SoulsFormats
 
             internal virtual void GetIndices(MSB3 msb, Entries entries)
             {
-                PartIndex = MSB.FindIndex(entries.Parts, PartName);
-                PointIndex = MSB.FindIndex(entries.Regions, PointName);
+                PartIndex = MSB.FindIndex(this, entries.Parts, PartName);
+                PointIndex = MSB.FindIndex(this, entries.Regions, PointName);
             }
 
             /// <summary>
@@ -311,7 +313,8 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
                 public string TreasurePartName { get; set; }
-                private int TreasurePartIndex;
+                [IndexProperty]
+                public int TreasurePartIndex { get; set; }
 
                 /// <summary>
                 /// First item lot given by this treasure.
@@ -432,7 +435,7 @@ namespace SoulsFormats
                 internal override void GetIndices(MSB3 msb, Entries entries)
                 {
                     base.GetIndices(msb, entries);
-                    TreasurePartIndex = MSB.FindIndex(entries.Parts, TreasurePartName);
+                    TreasurePartIndex = MSB.FindIndex(this, entries.Parts, TreasurePartName);
                 }
             }
 
@@ -483,14 +486,14 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Region))]
                 public string[] SpawnPointNames { get; private set; }
-                private int[] SpawnPointIndices;
+                public int[] SpawnPointIndices;
 
                 /// <summary>
                 /// Enemies spawned by this generator.
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
                 public string[] SpawnPartNames { get; private set; }
-                private int[] SpawnPartIndices;
+                public int[] SpawnPartIndices;
 
                 /// <summary>
                 /// Unknown.
@@ -607,8 +610,8 @@ namespace SoulsFormats
                 internal override void GetIndices(MSB3 msb, Entries entries)
                 {
                     base.GetIndices(msb, entries);
-                    SpawnPointIndices = MSB.FindIndices(entries.Regions, SpawnPointNames);
-                    SpawnPartIndices = MSB.FindIndices(entries.Parts, SpawnPartNames);
+                    SpawnPointIndices = MSB.FindIndices(this, entries.Regions, SpawnPointNames);
+                    SpawnPartIndices = MSB.FindIndices(this, entries.Parts, SpawnPartNames);
                 }
             }
 
@@ -644,7 +647,8 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
                 public string ObjActPartName { get; set; }
-                private int ObjActPartIndex;
+                [IndexProperty]
+                public int ObjActPartIndex { get; set; }
 
                 /// <summary>
                 /// ID in ObjActParam that configures this ObjAct.
@@ -655,7 +659,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown.
                 /// </summary>
-                public ObjActState ObjActStateType { get; set; }
+                public ObjActState ObjActStateType { get; set; } = ObjActState.OneState;
 
                 /// <summary>
                 /// Unknown.
@@ -716,7 +720,7 @@ namespace SoulsFormats
                 internal override void GetIndices(MSB3 msb, Entries entries)
                 {
                     base.GetIndices(msb, entries);
-                    ObjActPartIndex = MSB.FindIndex(entries.Parts, ObjActPartName);
+                    ObjActPartIndex = MSB.FindIndex(this, entries.Parts, ObjActPartName);
                 }
             }
 
@@ -730,6 +734,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// Position of the map offset.
                 /// </summary>
+                [PositionProperty]
                 public Vector3 Position { get; set; }
 
                 /// <summary>
@@ -818,12 +823,12 @@ namespace SoulsFormats
                 /// <summary>
                 /// Player type to use while in pseudo world. 
                 /// </summary>
-                public PseudoPlayerChrType PlayerChrType { get; set; }
+                public PseudoPlayerChrType PlayerChrType { get; set; } = PseudoPlayerChrType.WhitePhantom;
 
                 /// <summary>
                 /// Determines which set of FMG entries to use in pseudo world.
                 /// </summary>
-                public PseudoMessageSetType MessageSetType { get; set; }
+                public PseudoMessageSetType MessageSetType { get; set; } = PseudoMessageSetType.Default;
 
                 /// <summary>
                 /// ID of FMG entry to display when trying to join pseudo world.
@@ -885,14 +890,14 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown; probably some kind of route type.
                 /// </summary>
-                public int UnkT00 { get; set; }
+                public int PatrolType { get; set; }
 
                 /// <summary>
                 /// List of points in the route.
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Region))]
                 public string[] WalkPointNames { get; private set; }
-                private short[] WalkPointIndices;
+                public short[] WalkPointIndices;
 
                 /// <summary>
                 /// Creates a PatrolInfo with default values.
@@ -912,7 +917,7 @@ namespace SoulsFormats
 
                 private protected override void ReadTypeData(BinaryReaderEx br)
                 {
-                    UnkT00 = br.AssertInt32(0, 1, 2, 5);
+                    PatrolType = br.AssertInt32([0, 1, 2, 5]);
                     br.AssertInt32(0);
                     br.AssertInt32(0);
                     br.AssertInt32(0);
@@ -921,7 +926,7 @@ namespace SoulsFormats
 
                 private protected override void WriteTypeData(BinaryWriterEx bw)
                 {
-                    bw.WriteInt32(UnkT00);
+                    bw.WriteInt32(PatrolType);
                     bw.WriteInt32(0);
                     bw.WriteInt32(0);
                     bw.WriteInt32(0);
@@ -941,7 +946,7 @@ namespace SoulsFormats
                     base.GetIndices(msb, entries);
                     WalkPointIndices = new short[WalkPointNames.Length];
                     for (int i = 0; i < WalkPointNames.Length; i++)
-                        WalkPointIndices[i] = (short)MSB.FindIndex(entries.Regions, WalkPointNames[i]);
+                        WalkPointIndices[i] = (short)MSB.FindIndex(this, entries.Regions, WalkPointNames[i]);
                 }
             }
 
@@ -967,7 +972,7 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
                 public string[] GroupPartsNames { get; private set; }
-                private int[] GroupPartsIndices;
+                public int[] GroupPartsIndices;
 
                 /// <summary>
                 /// Creates a PlatoonInfo with default values.
@@ -1012,7 +1017,7 @@ namespace SoulsFormats
                 internal override void GetIndices(MSB3 msb, Entries entries)
                 {
                     base.GetIndices(msb, entries);
-                    GroupPartsIndices = MSB.FindIndices(entries.Parts, GroupPartsNames);
+                    GroupPartsIndices = MSB.FindIndices(this, entries.Parts, GroupPartsNames);
                 }
             }
 

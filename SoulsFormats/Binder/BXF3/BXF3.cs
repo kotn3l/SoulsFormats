@@ -307,7 +307,6 @@ namespace SoulsFormats
 
         public void Dispose()
         {
-            
         }
     }
 }

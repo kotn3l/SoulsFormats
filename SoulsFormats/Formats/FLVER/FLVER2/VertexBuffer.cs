@@ -19,7 +19,6 @@ namespace SoulsFormats
             internal int BufferIndex;
             internal int VertexCount;
             internal int BufferOffset;
-            internal int BufferLength;
 
             /// <summary>
             /// Creates a VertexBuffer with the specified layout.
@@ -37,7 +36,7 @@ namespace SoulsFormats
                 VertexCount = br.ReadInt32();
                 br.AssertInt32(0);
                 br.AssertInt32(0);
-                BufferLength = br.ReadInt32(); // Buffer length
+                br.ReadInt32(); // Buffer length
                 BufferOffset = br.ReadInt32();
             }
 
@@ -45,7 +44,21 @@ namespace SoulsFormats
             {
                 BufferLayout layout = layouts[LayoutIndex];
                 if (VertexSize != layout.Size)
-                    throw new InvalidDataException($"Mismatched vertex buffer ({VertexSize}) and buffer layout ({layout.Size}) sizes.");
+                {
+                    //Only try this for DS1
+                    if (header.Version == 0x2000B || header.Version == 0x2000C || header.Version == 0x2000D)
+                    {
+                        if (!layout.DarkSoulsRemasteredFix())
+                        {
+                            throw new InvalidDataException($"Mismatched vertex buffer and buffer layout sizes for Dark Souls Remastered model.");
+                        }
+                    }
+                    else
+                    {
+                        throw new InvalidDataException($"Mismatched vertex buffer and buffer layout sizes.");
+                    }
+                }
+
 
                 br.StepIn(dataOffset + BufferOffset);
                 {
@@ -54,7 +67,7 @@ namespace SoulsFormats
                         uvFactor = 2048;
 
                     for (int i = 0; i < count; i++)
-                            vertices[i].Read(br, layout, uvFactor);
+                        vertices[i].Read(br, layout, uvFactor);
                 }
                 br.StepOut();
 

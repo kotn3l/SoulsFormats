@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using static SoulsFormats.FLVER;
 
 namespace SoulsFormats
 {
@@ -21,7 +22,7 @@ namespace SoulsFormats
             /// </summary>
             public BufferLayout() : base() { }
 
-            internal BufferLayout(BinaryReaderEx br, FLVER2Header header) : base()
+            internal BufferLayout(BinaryReaderEx br) : base()
             {
                 int memberCount = br.ReadInt32();
                 br.AssertInt32(0);
@@ -32,30 +33,11 @@ namespace SoulsFormats
                 {
                     int structOffset = 0;
                     Capacity = memberCount;
-                    if (header.Unk68 == 5 && header.Unk6B != 0)
+                    for (int i = 0; i < memberCount; i++)
                     {
-                        for (int i = 0; i < 3; i++)
-                        {
-                            var member = new FLVER.LayoutMember(br, structOffset);
-                            structOffset += member.Size;
-                            this.Add(member);
-                        }
-                        structOffset = 0;
-                        for (int i = 3; i < memberCount; i++)
-                        {
-                            var member = new FLVER.LayoutMember(br, structOffset);
-                            structOffset += member.Size;
-                            this.Add(member);
-                        }
-                    }
-                    else
-                    {
-                        for (int i = 0; i < memberCount; i++)
-                        {
-                            var member = new FLVER.LayoutMember(br, structOffset);
-                            structOffset += member.Size;
-                            this.Add(member);
-                        }
+                        var member = new FLVER.LayoutMember(br, structOffset);
+                        structOffset += member.Size;
+                        Add(member);
                     }
                 }
                 br.StepOut();
@@ -78,6 +60,36 @@ namespace SoulsFormats
                     member.Write(bw, structOffset);
                     structOffset += member.Size;
                 }
+            }
+
+            /// <summary>
+            /// Dark Souls Remastered may place tangent layoutMembers for vertex arrays where there aren't any. We need to fix this for them to read correctly.
+            /// </summary>
+            public bool DarkSoulsRemasteredFix()
+            {
+                int normalIndex = -1;
+                for (int i = 0; i < this.Count; i++)
+                {
+                    var lyt = this[i];
+                    switch (lyt.Semantic)
+                    {
+                        case FLVER.LayoutSemantic.Normal:
+                            normalIndex = i;
+                            break;
+                        case FLVER.LayoutSemantic.Tangent:
+                            RemoveAt(i);
+                            return true;
+                    }
+                }
+                //If there's no normal, this probably shouldn't go in either.
+                if (normalIndex == -1)
+                {
+                    return false;
+                }
+
+                LayoutMember tangentLayout = new LayoutMember(LayoutType.Byte4C, LayoutSemantic.Tangent, 0, 0);
+                Insert(normalIndex + 1, tangentLayout);
+                return true;
             }
         }
     }

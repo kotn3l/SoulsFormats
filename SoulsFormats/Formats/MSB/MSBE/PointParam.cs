@@ -480,17 +480,19 @@ namespace SoulsFormats
             /// <summary>
             /// The location of the region.
             /// </summary>
+            [PositionProperty]
             public Vector3 Position { get; set; }
 
             /// <summary>
             /// The rotiation of the region, in degrees.
             /// </summary>
+            [RotationProperty]
             public Vector3 Rotation { get; set; }
 
             /// <summary>
-            /// Unknown.
+            /// Presumed ID for regions. Unique per map / incremented per region.
             /// </summary>
-            public int Unk2C { get; set; }
+            public int RegionID { get; set; }
 
             /// <summary>
             /// Unknown.
@@ -537,7 +539,8 @@ namespace SoulsFormats
             /// </summary>
             [MSBReference(ReferenceType = typeof(Part))]
             public string ActivationPartName { get; set; }
-            private int ActivationPartIndex;
+            [IndexProperty]
+            public int ActivationPartIndex { get; set; }
 
             /// <summary>
             /// Identifies the region in event scripts.
@@ -579,7 +582,7 @@ namespace SoulsFormats
                 MSB.ShapeType shapeType = br.ReadEnum32<MSB.ShapeType>();
                 Position = br.ReadVector3();
                 Rotation = br.ReadVector3();
-                Unk2C = br.ReadInt32();
+                RegionID = br.ReadInt32();
                 long baseDataOffset1 = br.ReadInt64();
                 long baseDataOffset2 = br.ReadInt64();
                 Unk40 = br.ReadInt32();
@@ -662,7 +665,7 @@ namespace SoulsFormats
                 bw.WriteUInt32((uint)Shape.Type);
                 bw.WriteVector3(Position);
                 bw.WriteVector3(Rotation);
-                bw.WriteInt32(Unk2C);
+                bw.WriteInt32(RegionID);
                 bw.ReserveInt64("BaseDataOffset1");
                 bw.ReserveInt64("BaseDataOffset2");
                 bw.WriteInt32(Unk40);
@@ -749,7 +752,7 @@ namespace SoulsFormats
 
             internal virtual void GetIndices(Entries entries)
             {
-                ActivationPartIndex = MSB.FindIndex(entries.Parts, ActivationPartName);
+                ActivationPartIndex = MSB.FindIndex(this, entries.Parts, ActivationPartName);
                 if (Shape is MSB.Shape.Composite composite)
                     composite.GetIndices(entries.Regions);
             }
@@ -949,7 +952,7 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Region))]
                 public string[] ChildRegionNames { get; private set; }
-                private int[] ChildRegionIndices;
+                public int[] ChildRegionIndices;
 
                 /// <summary>
                 /// Unknown.
@@ -1003,7 +1006,7 @@ namespace SoulsFormats
                 internal override void GetIndices(Entries entries)
                 {
                     base.GetIndices(entries);
-                    ChildRegionIndices = MSB.FindIndices(entries.Regions, ChildRegionNames);
+                    ChildRegionIndices = MSB.FindIndices(this, entries.Regions, ChildRegionNames);
                 }
             }
 
@@ -1063,7 +1066,8 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Region))]
                 public string WindAreaName { get; set; }
-                private int WindAreaIndex;
+                [IndexProperty]
+                public int WindAreaIndex { get; set; }
 
                 /// <summary>
                 /// Unknown.
@@ -1100,7 +1104,7 @@ namespace SoulsFormats
                 internal override void GetIndices(Entries entries)
                 {
                     base.GetIndices(entries);
-                    WindAreaIndex = MSB.FindIndex(entries.Regions, WindAreaName);
+                    WindAreaIndex = MSB.FindIndex(this, entries.Regions, WindAreaName);
                 }
             }
 
@@ -1167,7 +1171,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown.
                 /// </summary>
-                public int UnkT0C { get; set; }
+                public int MessageSfxID { get; set; }
 
                 /// <summary>
                 /// Event Flag required to be ON for the message to appear.
@@ -1210,9 +1214,9 @@ namespace SoulsFormats
                 {
                     MessageID = br.ReadInt16();
                     UnkT02 = br.ReadInt16();
-                    Hidden = br.AssertInt32(0, 1) == 1;
+                    Hidden = br.AssertInt32([0, 1]) == 1;
                     UnkT08 = br.ReadInt32();
-                    UnkT0C = br.ReadInt32();
+                    MessageSfxID = br.ReadInt32();
                     EnableEventFlagID = br.ReadUInt32();
                     CharacterModelName = br.ReadInt32();
                     NPCParamID = br.ReadInt32();
@@ -1226,7 +1230,7 @@ namespace SoulsFormats
                     bw.WriteInt16(UnkT02);
                     bw.WriteInt32(Hidden ? 1 : 0);
                     bw.WriteInt32(UnkT08);
-                    bw.WriteInt32(UnkT0C);
+                    bw.WriteInt32(MessageSfxID);
                     bw.WriteUInt32(EnableEventFlagID);
                     bw.WriteInt32(CharacterModelName);
                     bw.WriteInt32(NPCParamID);
@@ -1952,7 +1956,7 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
                 public string[] PartNames { get; private set; }
-                private int[] PartIndices;
+                public int[] PartIndices;
 
                 /// <summary>
                 /// Unknown.
@@ -2040,7 +2044,7 @@ namespace SoulsFormats
                 internal override void GetIndices(Entries entries)
                 {
                     base.GetIndices(entries);
-                    PartIndices = MSB.FindIndices(entries.Parts, PartNames);
+                    PartIndices = MSB.FindIndices(this, entries.Parts, PartNames);
                 }
             }
 
@@ -2429,7 +2433,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// 1 = Forbid riding torrent, 2 = Permit riding torrent
                 /// </summary>
-                public HorseRideOverrideType OverrideType { get; set; }
+                public HorseRideOverrideType OverrideType { get; set; } = HorseRideOverrideType.PreventRiding;
 
                 /// <summary>
                 /// Creates a HorseRideOverride with default values.

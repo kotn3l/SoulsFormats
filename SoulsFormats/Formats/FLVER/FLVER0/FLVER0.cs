@@ -39,17 +39,19 @@ namespace SoulsFormats
             return magic == "FLVER\0" && version >= 0x00000 && version < 0x20000;
         }
 
+        /// <summary>
+        /// Compute the full transform for a bone.
+        /// </summary>
+        /// <param name="index">The index of the bone to compute the full transform of.</param>
+        /// <returns>A matrix representing the world transform of the bone.</returns>
         public Matrix4x4 ComputeBoneWorldMatrix(int index)
         {
             var bone = Bones[index];
-            Matrix4x4 matrix = Bones[index].ComputeLocalTransform();
-            if (bone.ParentIndex != -1)
+            Matrix4x4 matrix = bone.ComputeLocalTransform();
+            while (bone.ParentIndex != -1)
             {
-                do
-                {
-                    bone = Bones[bone.ParentIndex];
-                    matrix *= Bones[index].ComputeLocalTransform();
-                } while (bone.ParentIndex != -1);
+                bone = Bones[bone.ParentIndex];
+                matrix *= bone.ComputeLocalTransform();
             }
 
             return matrix;
@@ -60,12 +62,12 @@ namespace SoulsFormats
             Header = new FLVER0Header();
 
             br.AssertASCII("FLVER\0");
-            Header.BigEndian = br.AssertASCII("L\0", "B\0") == "B\0";
+            Header.BigEndian = br.AssertASCII(["L\0", "B\0"]) == "B\0";
             br.BigEndian = Header.BigEndian;
 
             // 10002, 10003 - Another Century's Episode R
-            Header.Version = br.AssertInt32(0x0E, 0x0F, 0x10, 0x12, 0x13, 0x14, 0x15,
-                0x10002, 0x10003);
+            Header.Version = br.AssertInt32([0x0E, 0x0F, 0x10, 0x12, 0x13, 0x14, 0x15,
+                0x10002, 0x10003]);
             int dataOffset = br.ReadInt32();
             br.ReadInt32(); // Data length
             int dummyCount = br.ReadInt32();
@@ -77,7 +79,7 @@ namespace SoulsFormats
             Header.BoundingBoxMax = br.ReadVector3();
             br.ReadInt32(); // Face count not including motion blur meshes or degenerate faces
             br.ReadInt32(); // Total face count
-            Header.VertexIndexSize = br.AssertByte(16, 32);
+            Header.VertexIndexSize = br.AssertByte([16, 32]);
             Header.Unicode = br.ReadBoolean();
             Header.Unk4A = br.ReadByte();
             Header.Unk4B = br.ReadByte();

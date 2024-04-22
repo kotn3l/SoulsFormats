@@ -18,7 +18,7 @@ public abstract class MountedSoulsFile<TFormat> : SoulsFile<TFormat>, IDisposabl
     {
         throw new NotImplementedException("Read is not implemented for this format.");
     }
-
+    
     /// <summary>
     /// Loads a file from a byte array, automatically decompressing it if necessary.
     /// </summary>
@@ -31,7 +31,7 @@ public abstract class MountedSoulsFile<TFormat> : SoulsFile<TFormat>, IDisposabl
         file.Read(br, null);
         return file;
     }
-
+    
     /// <summary>
     /// Loads a file from the specified path, automatically decompressing it if necessary.
     /// </summary>
@@ -46,7 +46,7 @@ public abstract class MountedSoulsFile<TFormat> : SoulsFile<TFormat>, IDisposabl
         ret.Read(br, accessor);
         return ret;
     }
-
+    
     protected abstract void Dispose(bool disposing);
 
     public void Dispose()
