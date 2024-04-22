@@ -5,6 +5,8 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using CommunityToolkit.HighPerformance;
 using DotNext.Buffers;
@@ -56,7 +58,7 @@ namespace SoulsFormats
         public unsafe T Read<T>() where T : unmanaged
         {
             var reader = new SpanReader<byte>(_memory.Span[(int)Position..]);
-            T ret = reader.Read<T>();
+            T ret = Unsafe.ReadUnaligned<T>(ref MemoryMarshal.GetReference(reader.Read(sizeof(T))));
             Position += sizeof(T);
             return ret;
         }
