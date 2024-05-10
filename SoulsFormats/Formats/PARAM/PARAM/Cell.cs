@@ -65,6 +65,12 @@ namespace SoulsFormats
                 Value = clone.Value;
             }
 
+            public Cell(Cell clone, PARAMDEF.Field def)
+            {
+                Def = def;
+                Value = clone.Value;
+            }
+
             /// <summary>
             /// Returns a string representation of the cell.
             /// </summary>
