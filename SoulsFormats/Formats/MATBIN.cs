@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Text;
 
 namespace SoulsFormats
 {
@@ -266,6 +267,39 @@ namespace SoulsFormats
                     default:
                         throw new NotImplementedException($"Unimplemented value type: {Type}");
                 }
+            }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <returns></returns>
+            public override string ToString()
+            {
+                var sb = new StringBuilder();
+                sb.Append($"{Name}: ");
+                switch (Type)
+                {
+                    default:
+                    case ParamType.Bool:
+                    case ParamType.Int:
+                    case ParamType.Float:
+                        sb.Append($"{Value}");
+                        break;
+                    case ParamType.Int2:
+                        sb.Append("[ ");
+                        sb.Append(string.Join(',', (int[])Value));
+                        sb.Append(" ]");
+                        break;
+                    case ParamType.Float2:
+                    case ParamType.Float3:
+                    case ParamType.Float4:
+                    case ParamType.Float5:
+                        sb.Append("[ ");
+                        sb.Append(string.Join(',', (float[])Value));
+                        sb.Append(" ]");
+                        break;
+                }
+                return sb.ToString();
             }
         }
 
