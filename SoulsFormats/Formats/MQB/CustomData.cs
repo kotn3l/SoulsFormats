@@ -32,6 +32,7 @@ namespace SoulsFormats
             public int Unk44 { get; set; }
 
             public object Value { get; set; }
+            public byte[] Weird { get; set; }
 
             public List<Sequence> Sequences { get; set; }
 
@@ -47,7 +48,16 @@ namespace SoulsFormats
 
             internal CustomData(BinaryReaderEx br)
             {
-                Name = br.ReadFixStrW(0x40);
+                if (br.ReadInt16() != 0)
+                {
+                    br.Position -= 2;
+                    Name = br.ReadFixStrW(0x40);
+                }
+                else
+                {
+                    Weird = br.ReadBytes(0x4E); //some weird thing going on with the name. maybe has space in it?
+                }
+
                 Type = br.ReadEnum32<DataType>();
                 unkInt = br.ReadInt32();
 
@@ -123,7 +133,15 @@ namespace SoulsFormats
 
             internal void Write(BinaryWriterEx bw, List<CustomData> allCustomData, List<long> customDataValueOffsets)
             {
-                bw.WriteFixStrW(Name, 0x40, 0x00);
+                if (Weird != null)
+                {
+                    bw.WriteInt16(0);
+                    bw.WriteBytes(Weird);
+                }
+                else
+                {
+                    bw.WriteFixStrW(Name, 0x40, 0x00);
+                }
                 bw.WriteUInt32((uint)Type);
                 bw.WriteInt32(unkInt);
 
