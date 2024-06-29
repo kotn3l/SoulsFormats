@@ -187,7 +187,7 @@ namespace SoulsFormats
                 Generators = new List<Event.Generator>();
                 MapOffsets = new List<Event.MapOffset>();
                 PlatoonInfo = new List<Event.PlatoonInfo>();
-                PatrolInfo = new List<Event.PatrolInfo>();
+                PatrolRoutes = new List<Event.PatrolRoute>();
                 MapGimmicks = new List<Event.MapGimmick>();
                 Others = new List<Event.Other>();
 
@@ -206,7 +206,7 @@ namespace SoulsFormats
                 Unknown_17s = new List<Event.Unknown_17>();
                 Unknown_18s = new List<Event.Unknown_18>();
                 Unknown_19s = new List<Event.Unknown_19>();
-                PatrolRoutes = new List<Event.PatrolRoute>();
+                PatrolInfo = new List<Event.PatrolInfo>();
                 Ridings = new List<Event.Riding>();
                 StrategyRoutes = new List<Event.StrategyRoute>();
                 PatrolRoutePermanents = new List<Event.PatrolRoutePermanent>();
@@ -420,7 +420,8 @@ namespace SoulsFormats
             private protected abstract EventType Type { get; }
             private protected abstract bool HasTypeData { get; }
 
-            public int LocalIndex { get; set; }
+            // Index among events of the same type
+            public int TypeIndex { get; set; }
 
             /// Event: EventCommon
             [MSBReference(ReferenceType = typeof(Part))]
@@ -461,7 +462,7 @@ namespace SoulsFormats
                 long nameOffset = br.ReadInt64();
                 EventID = br.ReadInt32();
                 br.AssertInt32((int)Type);
-                LocalIndex = br.ReadInt32();
+                TypeIndex = br.ReadInt32();
                 br.AssertInt32(new int[1]);
 
                 long commonOffset = br.ReadInt64();
@@ -498,7 +499,7 @@ namespace SoulsFormats
                 bw.ReserveInt64("NameOffset");
                 bw.WriteInt32(EventID);
                 bw.WriteInt32((int)Type);
-                bw.WriteInt32(LocalIndex);
+                bw.WriteInt32(TypeIndex);
                 bw.WriteInt32(0);
 
                 bw.ReserveInt64("CommonOffset");
@@ -920,7 +921,7 @@ namespace SoulsFormats
                 /// Unknown.
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
-                public string[] GroupPartsNames { get; private set; }
+                public string[] GroupPartsNames { get; set; }
                 public int[] GroupPartsIndices;
 
                 /// <summary>
@@ -931,6 +932,8 @@ namespace SoulsFormats
                     PlatoonScriptID = -1;
                     GroupPartsIndices = new int[32];
                     Array.Fill<int>(GroupPartsIndices, -1);
+                    GroupPartsNames = new string[32];
+                    Array.Fill<string>(GroupPartsNames, "");
                 }
 
                 private protected override void DeepCopyTo(Event evnt)
@@ -977,7 +980,7 @@ namespace SoulsFormats
             }
 
             /// <summary>
-            /// A simple list of points defining a path for enemies to take.
+            /// NOT USED IN AC6
             /// </summary>
             public class PatrolInfo : Event
             {
@@ -987,7 +990,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown; probably some kind of route type.
                 /// </summary>
-                public int UnkT00 { get; set; }
+                public int PatrolType { get; set; }
 
                 /// <summary>
                 /// List of points in the route.
@@ -1003,6 +1006,8 @@ namespace SoulsFormats
                 {
                     WalkPointIndices = new short[24];
                     Array.Fill<short>(WalkPointIndices, (short)-1);
+                    WalkPointNames = new string[24];
+                    Array.Fill<string>(WalkPointNames, "");
                 }
 
                 private protected override void DeepCopyTo(Event evnt)
@@ -1015,7 +1020,7 @@ namespace SoulsFormats
 
                 private protected override void ReadTypeData(BinaryReaderEx br)
                 {
-                    UnkT00 = br.ReadInt32();
+                    PatrolType = br.ReadInt32();
                     br.AssertInt32(-1);
                     br.AssertInt32(new int[1]);
                     br.AssertInt32(new int[1]);
@@ -1024,7 +1029,7 @@ namespace SoulsFormats
 
                 private protected override void WriteTypeData(BinaryWriterEx bw)
                 {
-                    bw.WriteInt32(UnkT00);
+                    bw.WriteInt32(PatrolType);
                     bw.WriteInt32(-1);
                     bw.WriteInt32(0);
                     bw.WriteInt32(0);
@@ -1081,7 +1086,7 @@ namespace SoulsFormats
                 /// </summary>
                 
                 [MSBReference(ReferenceType = typeof(Part))]
-                public string[] PartNamesT0C { get; private set; }
+                public string[] PartNamesT0C { get; set; }
                 public short[] PartIndicesT0C;
 
                 /// <summary>
@@ -1089,7 +1094,7 @@ namespace SoulsFormats
                 /// </summary>
                 
                 [MSBReference(ReferenceType = typeof(Region))]
-                public string[] PointNamesT28 { get; private set; }
+                public string[] PointNamesT28 { get; set; }
                 public short[] PointIndicesT28;
 
                 /// <summary>
@@ -1102,10 +1107,16 @@ namespace SoulsFormats
                     PointIndexT04 = (short)-1;
                     UnkT06 = (short)-1;
                     PartIndexT08 = -1;
+
                     PartIndicesT0C = new short[14];
                     Array.Fill<short>(PartIndicesT0C, (short)-1);
+                    PartNamesT0C = new string[14];
+                    Array.Fill<string>(PartNamesT0C, "");
+
                     PointIndicesT28 = new short[16];
                     Array.Fill<short>(PointIndicesT28, (short)-1);
+                    PointNamesT28 = new string[16];
+                    Array.Fill<string>(PointNamesT28, "");
                 }
 
                 private protected override void ReadTypeData(BinaryReaderEx br)
@@ -1650,62 +1661,65 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown.
                 /// </summary>
-                public int Unk00 { get; set; }
+                [MSBEnum(EnumType = "PATROL_TYPE")]
+                public int PatrolType { get; set; }
                 private int Unk08 { get; set; }
                 private int Unk0C { get; set; }
 
                 /// <summary>
                 /// Unknown.
                 /// </summary>
-                [MSBReference(ReferenceType = typeof(Part))]
-                public string[] GroupPartsNames { get; private set; }
-                private short[] GroupPartsIndices;
+                [MSBReference(ReferenceType = typeof(Region))]
+                public string[] WalkRegionNames { get; private set; }
+                private short[] WalkRegionIndices;
 
                 /// <summary>
                 /// Creates a PatrolRoute with default values.
                 /// </summary>
                 public PatrolRoute() : base($"{nameof(Event)}: {nameof(PatrolRoute)}")
                 {
-                    GroupPartsIndices = new short[24];
-                    Array.Fill<short>(GroupPartsIndices, -1);
+                    WalkRegionIndices = new short[24];
+                    Array.Fill<short>(WalkRegionIndices, -1);
+                    WalkRegionNames = new string[24];
+                    Array.Fill<string>(WalkRegionNames, "");
                 }
 
                 private protected override void DeepCopyTo(Event evnt)
                 {
                     var patrolRoute = (PatrolRoute)evnt;
-                    patrolRoute.GroupPartsNames = (string[])GroupPartsNames.Clone();
+                    patrolRoute.WalkRegionNames = (string[])WalkRegionNames.Clone();
                 }
 
                 internal PatrolRoute(BinaryReaderEx br) : base(br) { }
 
                 private protected override void ReadTypeData(BinaryReaderEx br)
                 {
-                    Unk00 = br.ReadInt32();
+                    PatrolType = br.ReadInt32();
                     br.AssertInt32(-1);
                     Unk08 = br.ReadInt32();
                     Unk0C = br.ReadInt32();
-                    GroupPartsIndices = br.ReadInt16s(24);
+                    WalkRegionIndices = br.ReadInt16s(24);
                 }
 
                 private protected override void WriteTypeData(BinaryWriterEx bw)
                 {
-                    bw.WriteInt32(Unk00);
+                    bw.WriteInt32(PatrolType);
                     bw.WriteInt32(-1);
                     bw.WriteInt32(Unk08);
                     bw.WriteInt32(Unk0C);
-                    bw.WriteInt16s(GroupPartsIndices);
+                    bw.WriteInt16s(WalkRegionIndices);
                 }
 
                 internal override void GetNames(MSB6 msb, Entries entries)
                 {
                     base.GetNames(msb, entries);
-                    GroupPartsNames = MSB.FindNames(entries.Parts, GroupPartsIndices);
+                    WalkRegionNames = MSB.FindNames(entries.Regions, WalkRegionIndices);
                 }
 
                 internal override void GetIndices(MSB6 msb, Entries entries)
                 {
                     base.GetIndices(msb, entries);
-                    GroupPartsIndices = MSB.FindShortIndices(this, entries.Parts, GroupPartsNames);
+                    WalkRegionIndices = MSB.FindShortIndices(this, entries.Regions, WalkRegionNames);
                 }
             }
 

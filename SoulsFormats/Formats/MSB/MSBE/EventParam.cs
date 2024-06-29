@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Numerics;
+using System.Xml.Serialization;
 
 namespace SoulsFormats
 {
@@ -216,7 +216,8 @@ namespace SoulsFormats
             [MSBReference(ReferenceType = typeof(Part))]
             public string PartName { get; set; }
             [IndexProperty]
-            public int PartIndex { get; set; }
+            [XmlIgnore]
+            private int PartIndex { get; set; }
 
             /// <summary>
             /// Unknown.
@@ -224,7 +225,8 @@ namespace SoulsFormats
             [MSBReference(ReferenceType = typeof(Region))]
             public string RegionName { get; set; }
             [IndexProperty]
-            public int RegionIndex { get; set; }
+            [XmlIgnore]
+            private int RegionIndex { get; set; }
 
             /// <summary>
             /// Identifies the Event in event scripts.
@@ -428,7 +430,8 @@ namespace SoulsFormats
                 [MSBReference(ReferenceType = typeof(Part))]
                 public string TreasurePartName { get; set; }
                 [IndexProperty]
-                public int TreasurePartIndex { get; set; }
+                [XmlIgnore]
+                private int TreasurePartIndex { get; set; }
 
                 /// <summary>
                 /// The item lot to be given.
@@ -580,15 +583,21 @@ namespace SoulsFormats
                 /// Regions where parts will spawn from.
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Region))]
-                public string[] SpawnRegionNames { get; private set; }
-                public int[] SpawnRegionIndices;
+                public string[] SpawnRegionNames { get; set; }
+
+                [IndexProperty]
+                [XmlIgnore]
+                private int[] SpawnRegionIndices { get; set; }
 
                 /// <summary>
                 /// Parts that will be respawned.
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
-                public string[] SpawnPartNames { get; private set; }
-                public int[] SpawnPartIndices;
+                public string[] SpawnPartNames { get; set; }
+
+                [IndexProperty]
+                [XmlIgnore]
+                private int[] SpawnPartIndices { get; set; }
 
                 /// <summary>
                 /// Creates a Generator with default values.
@@ -687,7 +696,8 @@ namespace SoulsFormats
                 [MSBReference(ReferenceType = typeof(Part))]
                 public string ObjActPartName { get; set; }
                 [IndexProperty]
-                public int ObjActPartIndex { get; set; }
+                [XmlIgnore]
+                private int ObjActPartIndex { get; set; }
 
                 /// <summary>
                 /// A row in ObjActParam.
@@ -772,7 +782,8 @@ namespace SoulsFormats
                 [MSBReference(ReferenceType = typeof(Region))]
                 public string NavmeshRegionName { get; set; }
                 [IndexProperty]
-                public int NavmeshRegionIndex { get; set; }
+                [XmlIgnore]
+                private int NavmeshRegionIndex { get; set; }
 
                 /// <summary>
                 /// Creates a Navmesh with default values.
@@ -923,8 +934,11 @@ namespace SoulsFormats
                 /// Unknown.
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
-                public string[] GroupPartsNames { get; private set; }
-                public int[] GroupPartsIndices;
+                public string[] GroupPartsNames { get; set; }
+
+                [IndexProperty]
+                [XmlIgnore]
+                private int[] GroupPartsIndices { get; set; }
 
                 /// <summary>
                 /// Creates a PlatoonInfo with default values.
@@ -992,8 +1006,10 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Region))]
                 public string[] WalkRegionNames { get; set; }
+
                 [IndexProperty]
-                public short[] WalkRegionIndices { get; set; }
+                [XmlIgnore]
+                private short[] WalkRegionIndices { get; set; }
 
                 /// <summary>
                 /// Creates a PatrolInfo with default values.
@@ -1066,16 +1082,20 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
                 public string RiderPartName { get; set; }
+
                 [IndexProperty]
-                public int RiderPartIndex { get; set; }
+                [XmlIgnore]
+                private int RiderPartIndex { get; set; }
 
                 /// <summary>
                 /// Unknown.
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
                 public string MountPartName { get; set; }
+
                 [IndexProperty]
-                public int MountPartIndex { get; set; }
+                [XmlIgnore]
+                private int MountPartIndex { get; set; }
 
                 /// <summary>
                 /// Creates a Mount with default values.
@@ -1128,8 +1148,10 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
                 public string SignPartName { get; set; }
+
                 [IndexProperty]
-                public int SignPartIndex { get; set; }
+                [XmlIgnore]
+                private int SignPartIndex { get; set; }
 
                 /// <summary>
                 /// Unknown.
@@ -1249,8 +1271,10 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
                 public string RetryPartName { get; set; }
+
                 [IndexProperty]
-                public int RetryPartIndex { get; set; }
+                [XmlIgnore]
+                private int RetryPartIndex { get; set; }
 
                 /// <summary>
                 /// Flag that must be set for stake to be available.
@@ -1267,8 +1291,10 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Region))]
                 public string RetryRegionName { get; set; }
+
                 [IndexProperty]
-                public short RetryRegionIndex { get; set; }
+                [XmlIgnore]
+                private short RetryRegionIndex { get; set; }
 
                 /// <summary>
                 /// Creates a RetryPoint with default values.

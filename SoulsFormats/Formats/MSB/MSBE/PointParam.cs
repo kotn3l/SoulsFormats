@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Xml.Serialization;
 using static SoulsFormats.MSBE.Region;
 
 namespace SoulsFormats
@@ -573,8 +574,10 @@ namespace SoulsFormats
             /// </summary>
             [MSBReference(ReferenceType = typeof(Part))]
             public string ActivationPartName { get; set; }
+
             [IndexProperty]
-            public int ActivationPartIndex { get; set; }
+            [XmlIgnore]
+            private int ActivationPartIndex { get; set; }
 
             /// <summary>
             /// Identifies the region in event scripts.
@@ -877,7 +880,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown.
                 /// </summary>
-                public byte[] UnkMapID { get; private set; }
+                public byte[] UnkMapID { get; set; }
 
                 /// <summary>
                 /// Unknown.
@@ -985,8 +988,11 @@ namespace SoulsFormats
                 /// References to other regions used to build a composite shape.
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Region))]
-                public string[] ChildRegionNames { get; private set; }
-                public int[] ChildRegionIndices;
+                public string[] ChildRegionNames { get; set; }
+
+                [IndexProperty]
+                [XmlIgnore]
+                private int[] ChildRegionIndices { get; set; }
 
                 /// <summary>
                 /// Unknown.
@@ -1100,8 +1106,10 @@ namespace SoulsFormats
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Region))]
                 public string WindAreaName { get; set; }
+
                 [IndexProperty]
-                public int WindAreaIndex { get; set; }
+                [XmlIgnore]
+                private int WindAreaIndex { get; set; }
 
                 /// <summary>
                 /// Unknown.
@@ -1339,6 +1347,11 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown.
                 /// </summary>
+                public bool UnkT32 { get; set; }
+
+                /// <summary>
+                /// Unknown.
+                /// </summary>
                 public bool UnkT33 { get; set; }
 
                 /// <summary>
@@ -1372,7 +1385,7 @@ namespace SoulsFormats
                     IsModifyLight = br.ReadBoolean();
                     UnkT2F = br.ReadBoolean();
                     UnkT30 = br.ReadInt16();
-                    br.AssertByte(0);
+                    UnkT32 = br.ReadBoolean();
                     UnkT33 = br.ReadBoolean();
                     UnkT34 = br.ReadInt16();
                     UnkT36 = br.ReadInt16();
@@ -1393,7 +1406,7 @@ namespace SoulsFormats
                     bw.WriteBoolean(IsModifyLight);
                     bw.WriteBoolean(UnkT2F);
                     bw.WriteInt16(UnkT30);
-                    bw.WriteByte(0);
+                    bw.WriteBoolean(UnkT32);
                     bw.WriteBoolean(UnkT33);
                     bw.WriteInt16(UnkT34);
                     bw.WriteInt16(UnkT36);
@@ -1428,7 +1441,7 @@ namespace SoulsFormats
                 /// <summary>
                 /// Map ID this connection targets.
                 /// </summary>
-                public sbyte[] TargetMapID { get; private set; }
+                public sbyte[] TargetMapID { get; set; }
 
                 /// <summary>
                 /// Creates a Connection with default values.
@@ -1832,6 +1845,11 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown.
                 /// </summary>
+                public int UnkT10 { get; set; }
+
+                /// <summary>
+                /// Unknown.
+                /// </summary>
                 public float UnkT14 { get; set; }
 
                 /// <summary>
@@ -1852,7 +1870,7 @@ namespace SoulsFormats
                     UnkT04 = br.ReadInt32();
                     UnkT08 = br.ReadSingle();
                     UnkT0C = br.ReadSingle();
-                    br.AssertInt32(-1);
+                    UnkT10 = br.ReadInt32();
                     UnkT14 = br.ReadSingle();
                     UnkT18 = br.ReadSingle();
                     br.AssertInt32(0);
@@ -1864,7 +1882,7 @@ namespace SoulsFormats
                     bw.WriteInt32(UnkT04);
                     bw.WriteSingle(UnkT08);
                     bw.WriteSingle(UnkT0C);
-                    bw.WriteInt32(-1);
+                    bw.WriteInt32(UnkT10);
                     bw.WriteSingle(UnkT14);
                     bw.WriteSingle(UnkT18);
                     bw.WriteInt32(0);
@@ -1885,6 +1903,11 @@ namespace SoulsFormats
                 [MSBParamReference(ParamName = "WeatherLotParam")]
                 public int WeatherLotParamID { get; set; }
 
+                public sbyte UnkT08 { get; set; }
+                public sbyte UnkT09 { get; set; }
+                public sbyte UnkT0A { get; set; }
+                public sbyte UnkT0B { get; set; }
+
                 /// <summary>
                 /// Creates a WeatherOverride with default values.
                 /// </summary>
@@ -1896,7 +1919,10 @@ namespace SoulsFormats
                 {
                     WeatherLotParamID = br.ReadInt32();
                     br.AssertInt32(-1);
-                    br.AssertInt32(0);
+                    UnkT08 = br.ReadSByte();
+                    UnkT09 = br.ReadSByte();
+                    UnkT0A = br.ReadSByte();
+                    UnkT0B = br.ReadSByte();
                     br.AssertInt32(0);
                     br.AssertInt32(0);
                     br.AssertInt32(0);
@@ -1908,7 +1934,10 @@ namespace SoulsFormats
                 {
                     bw.WriteInt32(WeatherLotParamID);
                     bw.WriteInt32(-1);
-                    bw.WriteInt32(0);
+                    bw.WriteSByte(UnkT08);
+                    bw.WriteSByte(UnkT09);
+                    bw.WriteSByte(UnkT0A);
+                    bw.WriteSByte(UnkT0B);
                     bw.WriteInt32(0);
                     bw.WriteInt32(0);
                     bw.WriteInt32(0);
@@ -1989,8 +2018,11 @@ namespace SoulsFormats
                 /// References to enemies to defeat to receive the reward.
                 /// </summary>
                 [MSBReference(ReferenceType = typeof(Part))]
-                public string[] PartNames { get; private set; }
-                public int[] PartIndices;
+                public string[] PartNames { get; set; }
+
+                [IndexProperty]
+                [XmlIgnore]
+                private int[] PartIndices { get; set; }
 
                 /// <summary>
                 /// Unknown.
