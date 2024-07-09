@@ -35,6 +35,7 @@ namespace SoulsFormats
         /// Collections of files grouped by their hash value for faster lookup.
         /// </summary>
         public List<Bucket> Buckets { get; set; }
+        public HashSet<Bucket> FastLookup { get; private set; }
 
         /// <summary>
         /// Read a dvdbnd header from the given stream, formatted for the given game. Must already be decrypted, if applicable.
@@ -91,6 +92,8 @@ namespace SoulsFormats
             Buckets = new List<Bucket>(bucketCount);
             for (int i = 0; i < bucketCount; i++)
                 Buckets.Add(new Bucket(br, game));
+
+            FastLookup = new HashSet<Bucket>(Buckets);
         }
 
         private void Write(BinaryWriterEx bw)
@@ -162,6 +165,8 @@ namespace SoulsFormats
             /// </summary>
             public Bucket() : base() { }
 
+            public HashSet<FileHeader> FastLookup { get; private set; }
+
             internal Bucket(BinaryReaderEx br, Game game) : base()
             {
                 int fileHeaderCount = br.ReadInt32();
@@ -174,6 +179,8 @@ namespace SoulsFormats
                         Add(new FileHeader(br, game));
                 }
                 br.StepOut();
+
+                FastLookup = new HashSet<FileHeader>(this);
             }
 
             internal void Write(BinaryWriterEx bw, int index)
@@ -348,6 +355,17 @@ namespace SoulsFormats
                 bdtStream.Read(bytes, 0, PaddedFileSize);
                 AESKey?.Decrypt(bytes);
                 return bytes;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is FileHeader header &&
+                       FileNameHash == header.FileNameHash;
+            }
+
+            public override int GetHashCode()
+            {
+                return FileNameHash.GetHashCode();
             }
         }
 
