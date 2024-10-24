@@ -1,6 +1,16 @@
-﻿using System.Drawing;
+﻿using SoulsFormats;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
 using System.Numerics;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
+// FLVER implementation for Model Editor usage
+// Credit to The12thAvenger
 namespace SoulsFormats
 {
     public partial class FLVER
@@ -80,6 +90,11 @@ namespace SoulsFormats
             public override string ToString()
             {
                 return $"{ReferenceID}";
+            }
+
+            public Dummy Clone()
+            {
+                return (Dummy)MemberwiseClone();
             }
 
             internal Dummy(BinaryReaderEx br, int version)

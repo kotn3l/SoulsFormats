@@ -52,6 +52,7 @@ namespace SoulsFormats
         /// Creates a new file with no ID.
         /// </summary>
         public BinderFile(FileFlags flags, string name, byte[] bytes) : this(flags, -1, name, bytes) { }
+        public BinderFile(string name, Memory<byte> bytes) : this(FileFlags.Flag1, -1, name, bytes) { }
 
         /// <summary>
         /// Creates a new file.

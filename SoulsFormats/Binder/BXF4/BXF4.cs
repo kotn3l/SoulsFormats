@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
-using CommunityToolkit.HighPerformance.Buffers;
-using DotNext.Buffers;
 using DotNext.IO.MemoryMappedFiles;
 
 namespace SoulsFormats
@@ -73,7 +70,7 @@ namespace SoulsFormats
         public static BXF4 Read(Memory<byte> bhdBytes, string bdtPath)
         {
             using MemoryMappedFile dataFile = MemoryMappedFile.CreateFromFile(bdtPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
-            IMemoryOwner<byte> fsData = dataFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
+            IMappedMemoryOwner fsData = dataFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
             BinaryReaderEx bhdReader = new BinaryReaderEx(false, bhdBytes);
             BinaryReaderEx bdtReader = new BinaryReaderEx(false, fsData.Memory);
             return new BXF4(bhdReader, bdtReader) { _mappedMemory2 = fsData };
@@ -85,7 +82,7 @@ namespace SoulsFormats
         public static BXF4 Read(string bhdPath, Memory<byte> bdtBytes)
         {
             using MemoryMappedFile headerFile = MemoryMappedFile.CreateFromFile(bhdPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
-            IMemoryOwner<byte> fsHeader = headerFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
+            IMappedMemoryOwner fsHeader = headerFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
             BinaryReaderEx bhdReader = new BinaryReaderEx(false, fsHeader.Memory);
             BinaryReaderEx bdtReader = new BinaryReaderEx(false, bdtBytes);
             return new BXF4(bhdReader, bdtReader) { _mappedMemory1 = fsHeader };
@@ -98,7 +95,7 @@ namespace SoulsFormats
         {
             using MemoryMappedFile headerFile = MemoryMappedFile.CreateFromFile(bhdPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read),
                 dataFile = MemoryMappedFile.CreateFromFile(bdtPath, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
-            IMemoryOwner<byte> fsHeader = headerFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read),
+            IMappedMemoryOwner fsHeader = headerFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read),
                 fsData = dataFile.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
             BinaryReaderEx bhdReader = new BinaryReaderEx(false, fsHeader.Memory);
             BinaryReaderEx bdtReader = new BinaryReaderEx(false, fsData.Memory);
@@ -219,9 +216,9 @@ namespace SoulsFormats
         /// Creates an empty BXF4 formatted for DS3.
         /// </summary>
 
-        private IMemoryOwner<byte> _mappedMemory => throw new NotSupportedException();
-        private IMemoryOwner<byte> _mappedMemory1 = null;
-        private IMemoryOwner<byte> _mappedMemory2 = null;
+        private IMappedMemoryOwner _mappedMemory => throw new NotSupportedException();
+        private IMappedMemoryOwner _mappedMemory1 = null;
+        private IMappedMemoryOwner _mappedMemory2 = null;
 
         public BXF4()
         {

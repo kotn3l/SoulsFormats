@@ -38,6 +38,19 @@ namespace SoulsFormats
         }
 
         /// <summary>
+        /// Returns true if the bytes appear to be a file of this type.
+        /// </summary>
+        public static bool Is(Memory<byte> bytes)
+        {
+            if (bytes.Length == 0)
+                return false;
+
+            BinaryReaderEx br = new BinaryReaderEx(false, bytes);
+            var dummy = new TFormat();
+            return dummy.Is(SFUtil.GetDecompressedBR(br, out _));
+        }
+
+        /// <summary>
         /// Returns true if the file appears to be a file of this type.
         /// </summary>
         public static bool Is(string path)

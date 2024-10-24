@@ -123,6 +123,7 @@ namespace SoulsFormats
             /// The name of the texture; should not include a path or extension.
             /// </summary>
             public string Name { get; set; }
+            public string CachedName { get; set; }
 
             /// <summary>
             /// Indicates format of the texture.
@@ -164,6 +165,7 @@ namespace SoulsFormats
             /// </summary>
             public Texture()
             {
+                CachedName = null;
                 Name = "Unnamed";
                 Bytes = new byte[0];
             }
@@ -173,6 +175,7 @@ namespace SoulsFormats
             /// </summary>
             public Texture(string name, byte format, byte flags1, byte[] bytes)
             {
+                CachedName = null;
                 Name = name;
                 Format = format;
                 Flags1 = flags1;
@@ -190,13 +193,15 @@ namespace SoulsFormats
 
             internal Texture(BinaryReaderEx br, TPFPlatform platform, byte flag2, byte encoding)
             {
+                CachedName = null;
+
                 uint fileOffset = br.ReadUInt32();
                 int fileSize = br.ReadInt32();
 
                 Format = br.ReadByte();
                 Type = br.ReadEnum8<TexType>();
                 Mipmaps = br.ReadByte();
-                Flags1 = br.AssertByte([0, 1, 2, 3, 128]);
+                Flags1 = br.AssertByte([0, 1, 2, 3]);
 
                 if (platform != TPFPlatform.PC)
                 {
@@ -216,20 +221,15 @@ namespace SoulsFormats
                     }
                     else if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
                     {
-                        Header.TextureCount = br.ReadInt32();
-                        Header.Unk2 = br.AssertInt32([0xD, 0x8]);
-                    }
-                    else if (platform == TPFPlatform.PS5)
-                    {
-                        Header.TextureCount = br.ReadInt32();
-                        Header.Unk2 = br.AssertInt32(0x9);
+                        Header.TextureCount = br.AssertInt32([1, 6]);
+                        Header.Unk2 = br.AssertInt32(0xD);
                     }
                 }
 
                 uint nameOffset = br.ReadUInt32();
                 bool hasFloatStruct = br.AssertInt32([0, 1]) == 1;
 
-                if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone || platform == TPFPlatform.PS5)
+                if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
                     Header.DXGIFormat = br.ReadInt32();
 
                 if (hasFloatStruct)
@@ -286,7 +286,7 @@ namespace SoulsFormats
                         if (flag2 != 0)
                             bw.WriteInt32(Header.Unk2);
                     }
-                    else if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone || platform == TPFPlatform.PS5)
+                    else if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
                     {
                         bw.WriteInt32(Header.TextureCount);
                         bw.WriteInt32(Header.Unk2);
@@ -296,7 +296,7 @@ namespace SoulsFormats
                 bw.ReserveUInt32($"FileName{index}");
                 bw.WriteInt32(FloatStruct == null ? 0 : 1);
 
-                if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone || platform == TPFPlatform.PS5)
+                if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
                     bw.WriteInt32(Header.DXGIFormat);
 
                 if (FloatStruct != null)
@@ -370,11 +370,6 @@ namespace SoulsFormats
             /// Headerless DDS with DX10 metadata.
             /// </summary>
             Xbone = 5,
-
-            /// <summary>
-            /// New PS5 DDS texture format.
-            /// </summary>
-            PS5 = 8,
         }
 
         /// <summary>
@@ -396,6 +391,11 @@ namespace SoulsFormats
             /// One 3D texture.
             /// </summary>
             Volume = 2,
+
+            /// <summary>
+            /// Unknown
+            /// </summary>
+            UnknownAC6 = 3,
         }
 
         /// <summary>

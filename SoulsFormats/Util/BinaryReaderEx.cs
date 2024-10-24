@@ -5,11 +5,9 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
-using CommunityToolkit.HighPerformance;
 using DotNext.Buffers;
+using CommunityToolkit.HighPerformance;
 
 namespace SoulsFormats
 {
@@ -18,10 +16,10 @@ namespace SoulsFormats
     /// </summary>
     public sealed class BinaryReaderEx
     {
-        public static bool IsFlexible { get; set; }
+        public static bool IgnoreAsserts { get; set; }
 
         private Stack<long> _steps;
-        private Memory<byte> _memory;
+        public Memory<byte> _memory;
 
         /// <summary>
         /// Interpret values as big-endian if set, or little-endian if not.
@@ -58,7 +56,7 @@ namespace SoulsFormats
         public unsafe T Read<T>() where T : unmanaged
         {
             var reader = new SpanReader<byte>(_memory.Span[(int)Position..]);
-            T ret = Unsafe.ReadUnaligned<T>(ref MemoryMarshal.GetReference(reader.Read(sizeof(T))));
+            var ret = reader.Read<T>();
             Position += sizeof(T);
             return ret;
         }
@@ -121,7 +119,7 @@ namespace SoulsFormats
         /// </summary>
         private T AssertValue<T>(T value, string typeName, string valueFormat, T option) where T : IEquatable<T>
         {
-            if (IsFlexible) return value;
+            if (IgnoreAsserts) return value;
 
             if (value.Equals(option))
                 return value;
@@ -767,9 +765,9 @@ namespace SoulsFormats
         /// <summary>
         /// Reads either a four or eight-byte signed integer depending on VarintLong and throws an exception if it does not match any of the specified options.
         /// </summary>
-        public long AssertVarint(long option)
+        public long AssertVarint(params long[] options)
         {
-            return AssertValue(ReadVarint(), VarintLong ? "Varint64" : "Varint32", "0x{0:X}", option);
+            return AssertValue(ReadVarint(), VarintLong ? "Varint64" : "Varint32", "0x{0:X}", options);
         }
         
         /// <summary>

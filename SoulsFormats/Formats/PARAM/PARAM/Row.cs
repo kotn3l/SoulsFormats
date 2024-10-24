@@ -69,6 +69,35 @@ namespace SoulsFormats
                     cells.Add(new Cell(cell));
                 }
                 Cells = cells;
+}
+
+            internal Row(BinaryReaderEx br, PARAM parent, ref long actualStringsOffset)
+            {
+                long nameOffset;
+                if (parent.Format2D.HasFlag(FormatFlags1.LongDataOffset))
+                {
+                    ID = br.ReadInt32();
+                    br.ReadInt32(); // I would like to assert 0, but some of the generatordbglocation params in DS2S have garbage here
+                    DataOffset = br.ReadInt64();
+                    nameOffset = br.ReadInt64();
+                }
+                else
+                {
+                    ID = br.ReadInt32();
+                    DataOffset = br.ReadUInt32();
+                    nameOffset = br.ReadUInt32();
+                }
+
+                if (nameOffset != 0)
+                {
+                    if (actualStringsOffset == 0 || nameOffset < actualStringsOffset)
+                        actualStringsOffset = nameOffset;
+
+                    if (parent.Format2E.HasFlag(FormatFlags2.UnicodeRowNames))
+                        Name = br.GetUTF16(nameOffset);
+                    else
+                        Name = br.GetShiftJIS(nameOffset);
+                }
             }
 
             /// <summary>
@@ -109,35 +138,6 @@ namespace SoulsFormats
                 }
 
                 Cells = cells;
-            }
-
-            internal Row(BinaryReaderEx br, PARAM parent, ref long actualStringsOffset)
-            {
-                long nameOffset;
-                if (parent.Format2D.HasFlag(FormatFlags1.LongDataOffset))
-                {
-                    ID = br.ReadInt32();
-                    br.ReadInt32(); // I would like to assert 0, but some of the generatordbglocation params in DS2S have garbage here
-                    DataOffset = br.ReadInt64();
-                    nameOffset = br.ReadInt64();
-                }
-                else
-                {
-                    ID = br.ReadInt32();
-                    DataOffset = br.ReadUInt32();
-                    nameOffset = br.ReadUInt32();
-                }
-
-                if (nameOffset != 0)
-                {
-                    if (actualStringsOffset == 0 || nameOffset < actualStringsOffset)
-                        actualStringsOffset = nameOffset;
-
-                    if (parent.Format2E.HasFlag(FormatFlags2.UnicodeRowNames))
-                        Name = br.GetUTF16(nameOffset);
-                    else
-                        Name = br.GetShiftJIS(nameOffset);
-                }
             }
 
             internal void ReadCells(BinaryReaderEx br, PARAMDEF paramdef, ulong regulationVersion)

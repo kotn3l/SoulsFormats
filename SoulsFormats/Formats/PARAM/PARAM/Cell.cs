@@ -59,15 +59,15 @@ namespace SoulsFormats
                 Value = value;
             }
 
-            public Cell(Cell clone)
-            {
-                Def = clone.Def;
-                Value = clone.Value;
-            }
-
             public Cell(Cell clone, PARAMDEF.Field def)
             {
                 Def = def;
+                Value = clone.Value;
+            }
+
+            public Cell(Cell clone)
+            {
+                Def = clone.Def;
                 Value = clone.Value;
             }
 

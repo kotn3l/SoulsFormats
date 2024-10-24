@@ -65,7 +65,6 @@ namespace SoulsFormats
             [110] = 16,
             [112] = 16,
             [113] = 16,
-            [115] = 16,
         };
 
         private static Dictionary<byte, int> UncompressedBPP = new Dictionary<byte, int>
@@ -97,23 +96,11 @@ namespace SoulsFormats
         };
 
         private static byte[] DX10Formats = { 6, 100, 102, 106, 107, 112, 113 };
-        //private static byte[] HasAlpha
 
         public static Memory<byte> Headerize(TPF.Texture texture)
         {
             if (SFEncoding.ASCII.GetString(texture.Bytes.Span[..4].ToArray(), 0, 4) == "DDS ")
-            {
-                var dds2 = new DDS(texture.Bytes);
-                texture.Header = new TPF.TexHeader();
-                texture.Header.Width = (short)dds2.dwWidth;
-                texture.Header.Height = (short)dds2.dwHeight;
-                texture.Header.TextureCount = dds2.dwMipMapCount;
-                if (dds2.header10 != null)
-                {
-                    texture.Header.DXGIFormat = (int)dds2.header10.dxgiFormat;
-                }
                 return texture.Bytes;
-            }
 
             var dds = new DDS();
             byte format = texture.Format;
@@ -122,9 +109,7 @@ namespace SoulsFormats
             int mipCount = texture.Mipmaps;
             TPF.TexType type = texture.Type;
 
-            dds.dwFlags = DDSD.CAPS | DDSD.HEIGHT | DDSD.WIDTH | DDSD.PIXELFORMAT;
-            if (mipCount > 1)
-                dds.dwFlags |= DDSD.MIPMAPCOUNT;
+            dds.dwFlags = DDSD.CAPS | DDSD.HEIGHT | DDSD.WIDTH | DDSD.PIXELFORMAT | DDSD.MIPMAPCOUNT;
             if (CompressedBPB.ContainsKey(format))
                 dds.dwFlags |= DDSD.LINEARSIZE;
             else if (UncompressedBPP.ContainsKey(format))
@@ -134,18 +119,12 @@ namespace SoulsFormats
             dds.dwWidth = width;
 
             if (CompressedBPB.ContainsKey(format))
-                if (format == 102)
-                    dds.dwPitchOrLinearSize = Math.Max(1, (width + 3) / 4) * Math.Max(1, (width + 3) / 4) * CompressedBPB[format];
-                else if (format == 0)
-                    dds.dwPitchOrLinearSize = (Math.Max(1, (width + 3) / 4) * Math.Max(1, (width + 3) / 4) * CompressedBPB[format]) / 2;
-                else
-                    dds.dwPitchOrLinearSize = Math.Max(1, (width + 3) / 4) * CompressedBPB[format];
+                dds.dwPitchOrLinearSize = Math.Max(1, (width + 3) / 4) * CompressedBPB[format];
             else if (UncompressedBPP.ContainsKey(format))
                 dds.dwPitchOrLinearSize = (width * UncompressedBPP[format] + 7) / 8;
 
-            if (format == 102 || format == 0)
-                dds.dwDepth = 1;
-            else dds.dwDepth = 0;
+            // This line serves only to remind me that I didn't forget about dwDepth, I left it 0 on purpose.
+            dds.dwDepth = 0;
 
             if (mipCount == 0)
                 mipCount = DetermineMipCount(width, height);
@@ -227,8 +206,7 @@ namespace SoulsFormats
                     dds.header10.miscFlag = RESOURCE_MISC.TEXTURECUBE;
             }
 
-
-            var bytes = RebuildPixelData(texture.Bytes, format, width, height, mipCount, texture.Header.TextureCount);
+            var bytes = RebuildPixelData(texture.Bytes, format, width, height, mipCount, type);
             return dds.Write(bytes.Span);
         }
 
@@ -237,36 +215,36 @@ namespace SoulsFormats
             return (int)Math.Ceiling(Math.Log(Math.Max(width, height), 2)) + 1;
         }
 
-
-        private static Memory<byte> RebuildPixelData(Memory<byte> bytes, byte format, short width, short height, int mipCount, int imageCount)
+        private static Memory<byte> RebuildPixelData(Memory<byte> bytes, byte format, short width, short height, int mipCount, TPF.TexType type)
         {
-            //int imageCount = type == TPF.TexType.Cubemap ? 6 : 1;
-            //imageCount = type == TPF.TexType.Volume ? 28 : imageCount;
+            int imageCount = type == TPF.TexType.Cubemap ? 6 : 1;
             int padDimensions = 1;
-            if (format == 102 || format == 0 || format == 108 || format == 103 || format == 1 || format == 106 || format == 107 || format == 109 || format == 25)
+            if (format == 102)
                 padDimensions = 32;
 
             List<Image> images;
-
-            int texelSize = -1;
             if (CompressedBPB.TryGetValue(format, out var value))
-            {
-                texelSize= value;
                 images = Image.ReadCompressed(bytes, width, height, padDimensions, imageCount, mipCount, 0x80, value);
-            } 
             else if (UncompressedBPP.TryGetValue(format, out var value1))
-            {
-                texelSize = value;
                 images = Image.ReadUncompressed(bytes, width, height, padDimensions, imageCount, mipCount, 0x80, value1);
-            }
-            else throw new NotSupportedException($"Cannot decompose format {format}.");
+            else
+                throw new NotSupportedException($"Cannot decompose format {format}.");
 
-            foreach (Image image in images)
+            if (format == 10 || format == 102)
             {
-                for (int i = 0; i < image.MipLevels.Count; i++)
+                int texelSize = -1;
+                if (format == 10)
+                    texelSize = 4;
+                else if (format == 102)
+                    texelSize = 16;
+
+                foreach (Image image in images)
                 {
-                    int scale = (int)Math.Pow(2, i);
-                    image.MipLevels[i] = DeswizzleMipLevel(image.MipLevels[i], format, texelSize, width / scale, height / scale, padDimensions);
+                    for (int i = 0; i < image.MipLevels.Count; i++)
+                    {
+                        int scale = (int)Math.Pow(2, i);
+                        image.MipLevels[i] = DeswizzleMipLevel(image.MipLevels[i], format, texelSize, width / scale, height / scale, padDimensions);
+                    }
                 }
             }
 
@@ -280,26 +258,11 @@ namespace SoulsFormats
 
         private static byte[] DeswizzleMipLevel(byte[] swizzled, byte format, int texelSize, int width, int height, int padDimensions)
         {
-            int paddedWidth;
-            int paddedHeight;
-            int texelWidth;
-            if (format == 105)
-            {
-                paddedWidth = width;
-                paddedHeight = height;
-                texelWidth = paddedWidth * paddedHeight * texelSize;
-            }
-            else
-            {
-                paddedWidth = PadTo(width, padDimensions);
-                paddedHeight = PadTo(height, padDimensions);
-                texelWidth = (int)(Math.Ceiling(paddedWidth / 4f) * Math.Ceiling(paddedHeight / 4f) * texelSize);
-            }
-
-            if (format == 102 || format == 108 || format == 0 || format == 103 || format == 1 || format == 115 || format == 106 || format == 107 || format == 109 || format == 25)
-                texelWidth = paddedWidth / 4; //maybe needed?
-            /*else if (format == 105)
-                texelWidth = 4;*/
+            int paddedWidth = PadTo(width, padDimensions);
+            int paddedHeight = PadTo(height, padDimensions);
+            int texelWidth = paddedWidth;
+            if (format == 102)
+                texelWidth = paddedWidth / 4;
 
             byte[] unswizzled;
             if (format == 10)
@@ -313,7 +276,7 @@ namespace SoulsFormats
                 }
                 unswizzled = trimmed;
             }
-            else if (format == 102 || format == 0 || format == 108 || format == 103 || format == 1 || format == 109 || format == 115 || format == 106 || format == 107 || format == 25)
+            else if (format == 102)
             {
                 unswizzled = DeswizzlePS4(swizzled, format, texelSize, paddedWidth, paddedHeight);
                 byte[] trimmed = new byte[(int)Math.Max(1, width / 4f) * (int)Math.Max(1, height / 4f) * texelSize];
@@ -325,10 +288,6 @@ namespace SoulsFormats
                     Array.Copy(unswizzled, sourceIndex, trimmed, destIndex, length);
                 }
                 unswizzled = trimmed;
-            }
-            else if (format == 105 || format == 22)
-            {
-                unswizzled = DeswizzlePS4(swizzled, format, texelSize, paddedWidth, paddedHeight);
             }
             else
             {
@@ -364,34 +323,11 @@ namespace SoulsFormats
         {
             byte[] unswizzled = new byte[swizzled.Length];
 
-            int blocksH;
-            int blocksV;
-            int swizzleBlockSize;
+            int blocksH = (width + 31) / 32;
+            int blocksV = (height + 31) / 32;
+            int swizzleBlockSize = 32;
 
-            if (format == 22)
-            {
-                blocksH = (width + 7) / 8;
-                blocksV = (height + 7) / 8;
-                swizzleBlockSize = 8;
-            }
-            else if (format == 105)
-            {
-                blocksH = (width + 15) / 16;
-                blocksV = (height + 15) / 16;
-                swizzleBlockSize = 16;
-            }
-            else
-            {
-                blocksH = (width + 31) / 32;
-                blocksV = (height + 31) / 32;
-                swizzleBlockSize = 32;
-            }
             int readOffset = 0;
-            if (format == 22)
-            {
-                DeswizzleDDSBytesPS4RGBA(swizzled, unswizzled, ref readOffset, width, texelSize, width, height, 0, 2);
-                return unswizzled;
-            }
             int h;
             int v = 0;
             for (int i = 0; i < blocksV; i++)
@@ -400,23 +336,10 @@ namespace SoulsFormats
                 for (int j = 0; j < blocksH; j++)
                 {
                     int writeOffset = h + v;
-                    if (format == 105) //uncompressed? has alpha at least...
-                    {
-                        DeswizzleDDSBytesPS4RGBA(swizzled, unswizzled, ref readOffset, width, texelSize, 16, 16, writeOffset, 2);
-                    } else DeswizzlePS4Block(swizzled, unswizzled, ref readOffset, width, texelSize, 32, 32, writeOffset, 2);
+                    DeswizzlePS4Block(swizzled, unswizzled, ref readOffset, width, texelSize, 32, 32, writeOffset, 2);
                     h += swizzleBlockSize / 4 * texelSize;
                 }
-                if (format == 105)
-                {
-                    v += swizzleBlockSize * swizzleBlockSize;
-                }
-                else
-                {
-                    if (texelSize == 8)
-                        v += swizzleBlockSize * width / 2;
-                    else
-                        v += swizzleBlockSize * width;
-                }
+                v += swizzleBlockSize * width;
             }
 
             return unswizzled;
@@ -445,32 +368,7 @@ namespace SoulsFormats
                 readOffset += texelSize;
             }
         }
-        public static void DeswizzleDDSBytesPS4RGBA(byte[] swizzled, byte[] unswizzled, ref int readOffset, int imageWidth, int texelSize, int blockWidth, int blockHeight, int writeOffset, int offsetFactor)
-        {
-            if (blockWidth * blockHeight > (texelSize / 2))
-            {
-                DeswizzleDDSBytesPS4RGBA(swizzled, unswizzled, ref readOffset, imageWidth, texelSize, blockWidth / 2, blockHeight / 2,
-                    writeOffset,
-                    offsetFactor * 2);
-                DeswizzleDDSBytesPS4RGBA(swizzled, unswizzled, ref readOffset, imageWidth, texelSize, blockWidth / 2, blockHeight / 2,
-                    writeOffset + (blockWidth / 2),
-                    offsetFactor * 2);
-                DeswizzleDDSBytesPS4RGBA(swizzled, unswizzled, ref readOffset, imageWidth, texelSize, blockWidth / 2, blockHeight / 2,
-                    writeOffset + ((blockWidth / 2) * (blockHeight / 2) * offsetFactor),
-                    offsetFactor * 2);
-                DeswizzleDDSBytesPS4RGBA(swizzled, unswizzled, ref readOffset, imageWidth, texelSize, blockWidth / 2, blockHeight / 2,
-                    writeOffset + ((blockWidth / 2) * (blockHeight / 2) * offsetFactor) + (blockWidth / 2),
-                    offsetFactor * 2);
-            }
-            else
-            {
-                Array.Copy(swizzled, readOffset, unswizzled, writeOffset * (texelSize / 2), texelSize);
-                readOffset += texelSize;
 
-                Array.Copy(swizzled, readOffset, unswizzled, writeOffset * (texelSize / 2) + imageWidth * (texelSize / 2), texelSize);
-                readOffset += texelSize;
-            }
-        }
         private class Image
         {
             public List<byte[]> MipLevels;

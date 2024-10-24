@@ -1,6 +1,12 @@
-﻿using System;
+﻿using SoulsFormats;
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
+// FLVER implementation for Model Editor usage
+// Credit to The12thAvenger
 namespace SoulsFormats
 {
     public partial class FLVER2
@@ -28,7 +34,7 @@ namespace SoulsFormats
                 TerminatorID = int.MaxValue;
             }
 
-            internal GXList(BinaryReaderEx br, FLVER2Header header) : base()
+            internal GXList(BinaryReaderEx br, FLVERHeader header) : base()
             {
                 if (header.Version < 0x20010)
                 {
@@ -47,7 +53,7 @@ namespace SoulsFormats
                 }
             }
 
-            internal void Write(BinaryWriterEx bw, FLVER2Header header)
+            internal void Write(BinaryWriterEx bw, FLVERHeader header)
             {
                 if (header.Version < 0x20010)
                 {
@@ -63,6 +69,11 @@ namespace SoulsFormats
                     bw.WriteInt32(TerminatorLength + 0xC);
                     bw.WritePattern(TerminatorLength, 0x00);
                 }
+            }
+
+            public GXList Clone()
+            {
+                return (GXList)MemberwiseClone();
             }
         }
 
@@ -106,7 +117,7 @@ namespace SoulsFormats
                 Data = data;
             }
 
-            internal GXItem(BinaryReaderEx br, FLVER2Header header)
+            internal GXItem(BinaryReaderEx br, FLVERHeader header)
             {
                 if (header.Version <= 0x20010)
                 {
@@ -121,7 +132,7 @@ namespace SoulsFormats
                 Data = br.ReadBytes(length - 0xC);
             }
 
-            internal void Write(BinaryWriterEx bw, FLVER2Header header)
+            internal void Write(BinaryWriterEx bw, FLVERHeader header)
             {
                 if (header.Version <= 0x20010)
                 {
@@ -137,6 +148,10 @@ namespace SoulsFormats
                 bw.WriteInt32(Unk04);
                 bw.WriteInt32(Data.Length + 0xC);
                 bw.WriteBytes(Data);
+            }
+            public GXItem Clone()
+            {
+                return (GXItem)MemberwiseClone();
             }
         }
     }

@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 namespace SoulsFormats
@@ -10,13 +12,21 @@ namespace SoulsFormats
         /// </summary>
         public class VertexBuffer
         {
+            public bool EdgeCompressed { get; set; }
+
+            /// <summary>
+            /// The index of this buffer into the current vertex stream.<br/>
+            /// Used to combine buffers into a single vertex stream.
+            /// </summary>
+            public int BufferIndex { get; set; }
+
             /// <summary>
             /// Index to a layout in the FLVER's layout collection.
             /// </summary>
             public int LayoutIndex { get; set; }
 
             internal int VertexSize;
-            internal int BufferIndex;
+
             internal int VertexCount;
             internal int BufferOffset;
 
@@ -31,6 +41,19 @@ namespace SoulsFormats
             internal VertexBuffer(BinaryReaderEx br)
             {
                 BufferIndex = br.ReadInt32();
+
+                // TODO EDGE
+                int final = BufferIndex & ~0x60000000;
+                if (final != BufferIndex)
+                {
+                    EdgeCompressed = true;
+                    BufferIndex = final;
+                }
+                else
+                {
+                    EdgeCompressed = false;
+                }
+
                 LayoutIndex = br.ReadInt32();
                 VertexSize = br.ReadInt32();
                 VertexCount = br.ReadInt32();
@@ -40,7 +63,7 @@ namespace SoulsFormats
                 BufferOffset = br.ReadInt32();
             }
 
-            internal void ReadBuffer(BinaryReaderEx br, List<BufferLayout> layouts, FLVER.Vertex[] vertices, int count, int dataOffset, FLVER2Header header)
+            internal void ReadBuffer(BinaryReaderEx br, List<BufferLayout> layouts, List<FLVER.Vertex> vertices, int count, int dataOffset, FLVERHeader header)
             {
                 BufferLayout layout = layouts[LayoutIndex];
                 if (VertexSize != layout.Size)
@@ -71,17 +94,19 @@ namespace SoulsFormats
                 }
                 br.StepOut();
 
-                VertexSize = -1;
-                BufferIndex = -1;
-                VertexCount = -1;
-                BufferOffset = -1;
+                // TODO ACVD
+                //VertexSize = -1;
+                //BufferIndex = -1;
+                //VertexCount = -1;
+                //BufferOffset = -1;
             }
 
-            internal void Write(BinaryWriterEx bw, FLVER2Header header, int index, int bufferIndex, List<BufferLayout> layouts, int vertexCount)
+            internal void Write(BinaryWriterEx bw, FLVERHeader header, int index, int bufferIndex, List<BufferLayout> layouts, int vertexCount)
             {
                 BufferLayout layout = layouts[LayoutIndex];
 
-                bw.WriteInt32(bufferIndex);
+                // TODO Edge I wonder if this is just a byte for flags at the start
+                bw.WriteInt32(EdgeCompressed ? (bufferIndex | 0x60000000) : bufferIndex);
                 bw.WriteInt32(LayoutIndex);
                 bw.WriteInt32(layout.Size);
                 bw.WriteInt32(vertexCount);
@@ -91,7 +116,7 @@ namespace SoulsFormats
                 bw.ReserveInt32($"VertexBufferOffset{index}");
             }
 
-            internal void WriteBuffer(BinaryWriterEx bw, int index, List<BufferLayout> layouts, FLVER.Vertex[] Vertices, int dataStart, FLVER2Header header)
+            internal void WriteBuffer(BinaryWriterEx bw, int index, List<BufferLayout> layouts, List<FLVER.Vertex> Vertices, int dataStart, FLVERHeader header)
             {
                 BufferLayout layout = layouts[LayoutIndex];
                 bw.FillInt32($"VertexBufferOffset{index}", (int)bw.Position - dataStart);
@@ -102,6 +127,11 @@ namespace SoulsFormats
 
                 foreach (FLVER.Vertex vertex in Vertices)
                     vertex.Write(bw, layout, uvFactor);
+            }
+
+            public VertexBuffer Clone()
+            {
+                return (VertexBuffer)MemberwiseClone();
             }
         }
     }

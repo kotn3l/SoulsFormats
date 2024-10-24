@@ -1,11 +1,13 @@
-﻿using System;
+﻿using SoulsFormats;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.IO;
-using System.IO.MemoryMappedFiles;
-using DotNext.IO.MemoryMappedFiles;
+using System.Text;
+using System.Threading.Tasks;
 
+// FLVER implementation for Model Editor usage
+// Credit to The12thAvenger
 namespace SoulsFormats
 {
     /// <summary>
@@ -16,7 +18,7 @@ namespace SoulsFormats
         /// <summary>
         /// General values for this model.
         /// </summary>
-        public FLVER2Header Header { get; set; }
+        public FLVERHeader Header { get; set; }
 
         /// <summary>
         /// Dummy polygons in this model.
@@ -36,10 +38,11 @@ namespace SoulsFormats
         public List<GXList> GXLists { get; set; }
 
         /// <summary>
-        /// Bones used by this model, may or may not be the full skeleton.
+        /// List of <see cref="FLVER.Node"/> objects.
         /// </summary>
-        public List<FLVER.Bone> Bones { get; set; }
-        IReadOnlyList<FLVER.Bone> IFlver.Bones => Bones;
+        public List<FLVER.Node> Nodes { get; set; }
+        public List<FLVER.Node> Bones => Nodes;
+        IReadOnlyList<FLVER.Node> IFlver.Nodes => Nodes;
 
         /// <summary>
         /// Individual chunks of the model.
@@ -53,56 +56,26 @@ namespace SoulsFormats
         public List<BufferLayout> BufferLayouts { get; set; }
 
         /// <summary>
-        /// Unknown; only present in Sekiro.
+        /// Skeleton definitions
         /// </summary>
-        public SekiroUnkStruct SekiroUnk { get; set; }
-
-        private FlverCache Cache = null;
+        public SkeletonSet Skeletons { get; set; }
 
         /// <summary>
         /// Creates a FLVER with a default header and empty lists.
         /// </summary>
         public FLVER2()
         {
-            Header = new FLVER2Header();
+            Header = new FLVERHeader();
             Dummies = new List<FLVER.Dummy>();
             Materials = new List<Material>();
             GXLists = new List<GXList>();
-            Bones = new List<FLVER.Bone>();
+            Nodes = new List<FLVER.Node>();
             Meshes = new List<Mesh>();
             BufferLayouts = new List<BufferLayout>();
         }
-
-        /// <summary>
-        /// Creates a FLVER with a preset cache
-        /// </summary>
-        public static FLVER2 Read(Memory<byte> bytes, FlverCache cache)
+        public FLVER2 Clone()
         {
-            BinaryReaderEx br = new BinaryReaderEx(false, bytes);
-            FLVER2 file = new FLVER2();
-            file.Cache = cache;
-            DCX.Type ctype;
-            br = SFUtil.GetDecompressedBR(br, out ctype);
-            file.Compression = ctype;
-            file.Read(br);
-            return file;
-        }
-
-        /// <summary>
-        /// Loads a file from the specified path, automatically decompressing it if necessary.
-        /// </summary>
-        public static FLVER2 Read(string path, FlverCache cache)
-        {
-            using var file = MemoryMappedFile.CreateFromFile(path, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
-            using var accessor = file.CreateMemoryAccessor(0, 0, MemoryMappedFileAccess.Read);
-            BinaryReaderEx br = new BinaryReaderEx(false, accessor.Memory);
-            FLVER2 ret = new FLVER2();
-            ret.Cache = cache;
-            DCX.Type ctype;
-            br = SFUtil.GetDecompressedBR(br, out ctype);
-            ret.Compression = ctype;
-            ret.Read(br);
-            return ret;
+            return (FLVER2)MemberwiseClone();
         }
 
         /// <summary>
@@ -125,14 +98,9 @@ namespace SoulsFormats
         /// </summary>
         protected override void Read(BinaryReaderEx br)
         {
-            if (Cache == null)
-            {
-                Cache = new FlverCache();
-            }
-
             br.BigEndian = false;
 
-            Header = new FLVER2Header();
+            Header = new FLVERHeader();
             br.AssertASCII("FLVER\0");
             Header.BigEndian = br.AssertASCII(["L\0", "B\0"]) == "B\0";
             br.BigEndian = Header.BigEndian;
@@ -146,9 +114,8 @@ namespace SoulsFormats
             // BB:  20013, 20014
             // DS3: 20013, 20014
             // SDT: 2001A, 20016 (test chr)
-            // AC6: 2001B,
-            Header.Version = br.AssertInt32([0x20005, 0x20007, 0x20009, 0x2000B, 0x2000C, 0x2000D, 0x2000E, 0x2000F, 
-                0x20010, 0x20013, 0x20014, 0x20016, 0x2001A, 0x2001B]);
+            // AC6: 2001B
+            Header.Version = br.AssertInt32([0x20005, 0x20007, 0x20009, 0x2000B, 0x2000C, 0x2000D, 0x2000E, 0x2000F, 0x20010, 0x20013, 0x20014, 0x20016, 0x2001A, 0x2001B]);
 
             int dataOffset = br.ReadInt32();
             br.ReadInt32(); // Data length
@@ -167,7 +134,7 @@ namespace SoulsFormats
             int vertexIndicesSize = br.AssertByte([0, 8, 16, 32]);
             Header.Unicode = br.ReadBoolean();
             Header.Unk4A = br.ReadBoolean();
-            br.AssertByte(0);
+            Header.Unk4B = br.ReadBoolean();
 
             Header.Unk4C = br.ReadInt32();
 
@@ -183,6 +150,7 @@ namespace SoulsFormats
             br.AssertInt32(0);
             br.AssertInt32(0);
             Header.Unk68 = br.AssertInt32([0, 1, 2, 3, 4]);
+            //Header.Unk68 = br.ReadInt32();
             br.AssertInt32(0);
             br.AssertInt32(0);
             Header.Unk74 = br.AssertInt32([0, 0x10]);
@@ -199,9 +167,9 @@ namespace SoulsFormats
             for (int i = 0; i < materialCount; i++)
                 Materials.Add(new Material(br, Header, GXLists, gxListIndices));
 
-            Bones = new List<FLVER.Bone>(boneCount);
+            Nodes = new List<FLVER.Node>(boneCount);
             for (int i = 0; i < boneCount; i++)
-                Bones.Add(new FLVER.Bone(br, Header.Unicode));
+                Nodes.Add(new FLVER.Node(br, Header.Unicode));
 
             Meshes = new List<Mesh>(meshCount);
             for (int i = 0; i < meshCount; i++)
@@ -209,7 +177,7 @@ namespace SoulsFormats
 
             var faceSets = new List<FaceSet>(faceSetCount);
             for (int i = 0; i < faceSetCount; i++)
-                faceSets.Add(new FaceSet(br, Header, Cache, vertexIndicesSize, dataOffset));
+                faceSets.Add(new FaceSet(br, Header, vertexIndicesSize, dataOffset));
 
             var vertexBuffers = new List<VertexBuffer>(vertexBufferCount);
             for (int i = 0; i < vertexBufferCount; i++)
@@ -224,7 +192,7 @@ namespace SoulsFormats
                 textures.Add(new Texture(br, Header));
 
             if (Header.Version >= 0x2001A)
-                SekiroUnk = new SekiroUnkStruct(br);
+                Skeletons = new SkeletonSet(br);
 
             Dictionary<int, Texture> textureDict = SFUtil.Dictionize(textures);
             foreach (Material material in Materials)
@@ -240,7 +208,7 @@ namespace SoulsFormats
             {
                 mesh.TakeFaceSets(faceSetDict);
                 mesh.TakeVertexBuffers(vertexBufferDict, BufferLayouts);
-                mesh.ReadVertices(br, dataOffset, BufferLayouts, Header, Cache);
+                mesh.ReadVertices(br, dataOffset, BufferLayouts, Header);
             }
             if (faceSetDict.Count != 0)
                 throw new NotSupportedException("Orphaned face sets found.");
@@ -262,7 +230,7 @@ namespace SoulsFormats
             bw.ReserveInt32("DataSize");
             bw.WriteInt32(Dummies.Count);
             bw.WriteInt32(Materials.Count);
-            bw.WriteInt32(Bones.Count);
+            bw.WriteInt32(Nodes.Count);
             bw.WriteInt32(Meshes.Count);
             bw.WriteInt32(Meshes.Sum(m => m.VertexBuffers.Count));
             bw.WriteVector3(Header.BoundingBoxMin);
@@ -272,7 +240,7 @@ namespace SoulsFormats
             int totalFaceCount = 0;
             foreach (Mesh mesh in Meshes)
             {
-                bool allowPrimitiveRestarts = mesh.Vertices.Length < ushort.MaxValue;
+                bool allowPrimitiveRestarts = mesh.Vertices.Count < ushort.MaxValue;
                 foreach (FaceSet faceSet in mesh.FaceSets)
                 {
                     faceSet.AddFaceCounts(allowPrimitiveRestarts, ref trueFaceCount, ref totalFaceCount);
@@ -297,7 +265,7 @@ namespace SoulsFormats
             bw.WriteByte(vertexIndicesSize);
             bw.WriteBoolean(Header.Unicode);
             bw.WriteBoolean(Header.Unk4A);
-            bw.WriteByte(0);
+            bw.WriteBoolean(Header.Unk4B);
 
             bw.WriteInt32(Header.Unk4C);
 
@@ -325,8 +293,8 @@ namespace SoulsFormats
             for (int i = 0; i < Materials.Count; i++)
                 Materials[i].Write(bw, i);
 
-            for (int i = 0; i < Bones.Count; i++)
-                Bones[i].Write(bw, i);
+            for (int i = 0; i < Nodes.Count; i++)
+                Nodes[i].Write(bw, i);
 
             for (int i = 0; i < Meshes.Count; i++)
                 Meshes[i].Write(bw, i);
@@ -349,7 +317,7 @@ namespace SoulsFormats
             foreach (Mesh mesh in Meshes)
             {
                 for (int i = 0; i < mesh.VertexBuffers.Count; i++)
-                    mesh.VertexBuffers[i].Write(bw, Header, vertexBufferIndex + i, i, BufferLayouts, mesh.Vertices.Length);
+                    mesh.VertexBuffers[i].Write(bw, Header, vertexBufferIndex + i, i, BufferLayouts, mesh.Vertices.Count);
                 vertexBufferIndex += mesh.VertexBuffers.Count;
             }
 
@@ -364,7 +332,7 @@ namespace SoulsFormats
             }
 
             if (Header.Version >= 0x2001A)
-                SekiroUnk.Write(bw);
+                Skeletons.Write(bw);
 
             bw.Pad(0x10);
             for (int i = 0; i < BufferLayouts.Count; i++)
@@ -424,8 +392,8 @@ namespace SoulsFormats
             }
 
             bw.Pad(0x10);
-            for (int i = 0; i < Bones.Count; i++)
-                Bones[i].WriteStrings(bw, Header.Unicode, i);
+            for (int i = 0; i < Nodes.Count; i++)
+                Nodes[i].WriteStrings(bw, Header.Unicode, i);
 
             int alignment = Header.Version <= 0x2000E ? 0x20 : 0x10;
             bw.Pad(alignment);
@@ -470,6 +438,87 @@ namespace SoulsFormats
             bw.FillInt32("DataSize", (int)bw.Position - dataStart);
             if (Header.Version == 0x2000F || Header.Version == 0x20010)
                 bw.Pad(0x20);
+        }
+
+        /// <summary>
+        /// General metadata about a FLVER.
+        /// </summary>
+        public class FLVERHeader
+        {
+            /// <summary>
+            /// If true FLVER will be written big-endian, if false little-endian.
+            /// </summary>
+            public bool BigEndian { get; set; }
+
+            /// <summary>
+            /// Version of the format indicating presence of various features.
+            /// </summary>
+            public int Version { get; set; }
+
+            /// <summary>
+            /// Minimum extent of the entire model.
+            /// </summary>
+            public Vector3 BoundingBoxMin { get; set; }
+
+            /// <summary>
+            /// Maximum extent of the entire model.
+            /// </summary>
+            public Vector3 BoundingBoxMax { get; set; }
+
+            /// <summary>
+            /// If true strings are UTF-16, if false Shift-JIS.
+            /// </summary>
+            public bool Unicode { get; set; }
+
+            /// <summary>
+            /// Unknown.
+            /// </summary>
+            public bool Unk4A { get; set; }
+
+            /// <summary>
+            /// Unknown.
+            /// </summary>
+            public bool Unk4B { get; set; }
+
+            /// <summary>
+            /// Unknown; I believe this is the primitive restart constant, but I'm not certain.
+            /// </summary>
+            public int Unk4C { get; set; }
+
+            /// <summary>
+            /// Unknown.
+            /// </summary>
+            public byte Unk5C { get; set; }
+
+            /// <summary>
+            /// Unknown.
+            /// </summary>
+            public byte Unk5D { get; set; }
+
+            /// <summary>
+            /// Unknown.
+            /// </summary>
+            public int Unk68 { get; set; }
+
+            /// <summary>
+            /// Unknown
+            /// </summary>
+            public int Unk74 { get; set; }
+
+            /// <summary>
+            /// Creates a FLVERHeader with default values.
+            /// </summary>
+            public FLVERHeader()
+            {
+                BigEndian = false;
+                Version = 0x20014;
+                Unicode = true;
+            }
+
+            public FLVERHeader Clone()
+            {
+                return (FLVERHeader)MemberwiseClone();
+            }
         }
     }
 }
