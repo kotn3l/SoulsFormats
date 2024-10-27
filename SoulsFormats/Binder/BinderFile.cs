@@ -73,5 +73,18 @@ namespace SoulsFormats
         {
             return $"Flags: 0x{(byte)Flags:X2} | ID: {ID} | Name: {Name} | Length: {Bytes.Length}";
         }
+
+        public override bool Equals(object obj)
+        {
+            return obj is BinderFile file &&
+                   Flags == file.Flags &&
+                   ID == file.ID &&
+                   Name == file.Name;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Flags, ID, Name, Bytes);
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 
 namespace SoulsFormats
@@ -115,6 +116,21 @@ namespace SoulsFormats
 
             bw.FillInt64("SourcePathOffset", bw.Position);
             bw.WriteUTF16(SourcePath, true);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is MATBIN mATBIN &&
+                   ShaderPath == mATBIN.ShaderPath &&
+                   SourcePath == mATBIN.SourcePath &&
+                   Key == mATBIN.Key &&
+                   Params.SequenceEqual(mATBIN.Params) &&
+                   Samplers.SequenceEqual(mATBIN.Samplers);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(ShaderPath, SourcePath, Key, Params, Samplers);
         }
 
         /// <summary>
@@ -267,6 +283,20 @@ namespace SoulsFormats
                         throw new NotImplementedException($"Unimplemented value type: {Type}");
                 }
             }
+
+            public override bool Equals(object obj)
+            {
+                return obj is Param param &&
+                       Name == param.Name &&
+                       Value.Equals(param.Value) &&
+                       Key == param.Key &&
+                       Type == param.Type;
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(Name, Value, Key, Type);
+            }
         }
 
         /// <summary>
@@ -328,6 +358,20 @@ namespace SoulsFormats
 
                 bw.FillInt64($"SamplerPathOffset[{index}]", bw.Position);
                 bw.WriteUTF16(Path, true);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is Sampler sampler &&
+                       Type == sampler.Type &&
+                       Path == sampler.Path &&
+                       Key == sampler.Key &&
+                       Unk14.Equals(sampler.Unk14);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(Type, Path, Key, Unk14);
             }
         }
     }

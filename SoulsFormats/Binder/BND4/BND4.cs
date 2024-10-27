@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using System.Linq;
 using DotNext.IO.MemoryMappedFiles;
 
 namespace SoulsFormats
@@ -213,6 +214,35 @@ namespace SoulsFormats
         {
             _mappedMemory?.Dispose();
             _mappedMemory = null;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is BND4 bND &&
+                   Files.SequenceEqual(bND.Files) &&
+                   Version == bND.Version &&
+                   Format == bND.Format &&
+                   Unk04 == bND.Unk04 &&
+                   Unk05 == bND.Unk05 &&
+                   BigEndian == bND.BigEndian &&
+                   BitBigEndian == bND.BitBigEndian &&
+                   Unicode == bND.Unicode &&
+                   Extended == bND.Extended;
+        }
+
+        public override int GetHashCode()
+        {
+            HashCode hash = new HashCode();
+            hash.Add(Files);
+            hash.Add(Version);
+            hash.Add(Format);
+            hash.Add(Unk04);
+            hash.Add(Unk05);
+            hash.Add(BigEndian);
+            hash.Add(BitBigEndian);
+            hash.Add(Unicode);
+            hash.Add(Extended);
+            return hash.ToHashCode();
         }
     }
 }

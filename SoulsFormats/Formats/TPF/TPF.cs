@@ -14,6 +14,7 @@ namespace SoulsFormats
         /// The textures contained within this TPF.
         /// </summary>
         public List<Texture> Textures { get; set; }
+        public Dictionary<string, Texture> FastTextureLookup { get; set; }
 
         /// <summary>
         /// The platform this TPF will be used on.
@@ -71,8 +72,13 @@ namespace SoulsFormats
             br.AssertByte(0);
 
             Textures = new List<Texture>(fileCount);
+            FastTextureLookup = new Dictionary<string, Texture>();
             for (int i = 0; i < fileCount; i++)
-                Textures.Add(new Texture(br, Platform, Flag2, Encoding));
+            {
+                var t = new Texture(br, Platform, Flag2, Encoding);
+                Textures.Add(t);
+                FastTextureLookup.Add(t.Name, t);
+            }
         }
 
         /// <summary>
@@ -113,6 +119,35 @@ namespace SoulsFormats
         /// </summary>
         public IEnumerator<Texture> GetEnumerator() => Textures.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public override bool Equals(object obj)
+        {
+            //bool b = obj is TPF tPF;
+            bool b = false;
+            if (obj is TPF tPF && Textures.Count == tPF.Textures.Count)
+            {
+                b = true;
+                for (int i = 0; i < Textures.Count; i++)
+                {
+                    b &= Textures[i].Equals(tPF.Textures[i]);
+                }
+                b &= Compression == tPF.Compression &&
+                   Platform == tPF.Platform &&
+                   Encoding == tPF.Encoding &&
+                   Flag2 == tPF.Flag2;
+            }
+            return b;
+        }
+
+        public override int GetHashCode()
+        {
+            int hash = 0;
+            for (int i = 0; i < Textures.Count; i++)
+            {
+                HashCode.Combine(hash, Textures[i].GetHashCode());
+            }
+            return HashCode.Combine(Compression, hash, Platform, Encoding, Flag2);
+        }
 
         /// <summary>
         /// A DDS texture in a TPF container.
@@ -339,6 +374,20 @@ namespace SoulsFormats
             {
                 return $"[{Format} {Type}] {Name}";
             }
+
+            public override bool Equals(object obj)
+            {
+                return obj is Texture texture &&
+                       Name == texture.Name &&
+                       Format == texture.Format &&
+                       Type == texture.Type &&
+                       Flags1 == texture.Flags1 && (Header == null && texture.Header == null || Header.Equals(texture.Header));
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(Name, Format, Type, Flags1, Header);
+            }
         }
 
         /// <summary>
@@ -432,6 +481,22 @@ namespace SoulsFormats
             /// Microsoft DXGI_FORMAT.
             /// </summary>
             public int DXGIFormat { get; set; }
+
+            public override bool Equals(object obj)
+            {
+                return obj is TexHeader header &&
+                       Width == header.Width &&
+                       Height == header.Height &&
+                       TextureCount == header.TextureCount &&
+                       Unk1 == header.Unk1 &&
+                       Unk2 == header.Unk2 &&
+                       DXGIFormat == header.DXGIFormat;
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(Width, Height, TextureCount, Unk1, Unk2, DXGIFormat);
+            }
         }
 
         /// <summary>

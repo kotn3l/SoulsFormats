@@ -110,13 +110,16 @@ namespace SoulsFormats
             /// <summary>
             /// Creates a transformation matrix from the scale, rotation, and translation of the bone.
             /// </summary>
-            public Matrix4x4 ComputeLocalTransform()
+            public Matrix4x4 ComputeLocalTransform(int mirror = 1)
             {
+                var pos = Position;
+                pos.X *= mirror;
+
                 return Matrix4x4.CreateScale(Scale)
                     * Matrix4x4.CreateRotationX(Rotation.X)
-                    * Matrix4x4.CreateRotationZ(Rotation.Z)
-                    * Matrix4x4.CreateRotationY(Rotation.Y)
-                    * Matrix4x4.CreateTranslation(Position);
+                    * Matrix4x4.CreateRotationZ(Rotation.Z * mirror)
+                    * Matrix4x4.CreateRotationY(Rotation.Y * mirror)
+                    * Matrix4x4.CreateTranslation(pos);
             }
 
             /// <summary>
