@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -35,7 +36,7 @@ namespace SoulsFormats
         /// Collections of files grouped by their hash value for faster lookup.
         /// </summary>
         public List<Bucket> Buckets { get; set; }
-        public HashSet<Bucket> FastLookup { get; private set; }
+        public Bucket MasterBucket { get; private set; }
 
         /// <summary>
         /// Read a dvdbnd header from the given stream, formatted for the given game. Must already be decrypted, if applicable.
@@ -93,7 +94,7 @@ namespace SoulsFormats
             for (int i = 0; i < bucketCount; i++)
                 Buckets.Add(new Bucket(br, game));
 
-            FastLookup = new HashSet<Bucket>(Buckets);
+            MasterBucket = Bucket.Union(Buckets);
         }
 
         private void Write(BinaryWriterEx bw)
@@ -158,29 +159,93 @@ namespace SoulsFormats
         /// <summary>
         /// A collection of files grouped by their hash.
         /// </summary>
-        public class Bucket : List<FileHeader>
+        public class Bucket : IEnumerable<FileHeader>
         {
             /// <summary>
             /// Creates an empty Bucket.
             /// </summary>
-            public Bucket() : base() { }
+            public Bucket()
+            {
+                _ofiles = new List<FileHeader>();
+                _kfiles = new Dictionary<ulong, FileHeader>();
+            }
 
-            public HashSet<FileHeader> FastLookup { get; private set; }
+            public int Count => _ofiles.Count;
+
+            private readonly List<FileHeader> _ofiles;
+            private readonly Dictionary<ulong, FileHeader> _kfiles;
+
+            public FileHeader this[int i]
+            {
+                get
+                {
+                    return _ofiles[i];
+                }
+                /*set
+                {
+                    _ofiles[i] = value;
+                }*/
+            }
+
+            public FileHeader this[ulong key]
+            {
+                get
+                {
+                    return _kfiles[key];
+                }
+                /*set
+                {
+                    _kfiles[key] = value;
+                }*/
+            }
+
+            public void Add(FileHeader fh, int i)
+            {
+                _ofiles.Add(fh);
+                _kfiles.Add(fh.FileNameHash, fh);
+            }
+
+            public void AddRange(Bucket b)
+            {
+                for (int i = 0; i < b.Count; i++)
+                {
+                    Add(b[i], i);
+                }
+            }
+
+            public bool TryGetValue(ulong hash, out FileHeader fh)
+            {
+                return _kfiles.TryGetValue(hash, out fh);
+            }
 
             internal Bucket(BinaryReaderEx br, Game game) : base()
             {
                 int fileHeaderCount = br.ReadInt32();
                 int fileHeadersOffset = br.ReadInt32();
-                Capacity = fileHeaderCount;
+                _ofiles = new List<FileHeader>(fileHeaderCount);
+                _kfiles = new Dictionary<ulong, FileHeader>(fileHeaderCount);
+                //FastLookup = new Dictionary<ulong, FileHeader>();
 
                 br.StepIn(fileHeadersOffset);
                 {
                     for (int i = 0; i < fileHeaderCount; i++)
-                        Add(new FileHeader(br, game));
+                    {
+                        var fh = new FileHeader(br, game);
+                        Add(fh, i);
+                    }    
                 }
                 br.StepOut();
 
-                FastLookup = new HashSet<FileHeader>(this);
+            }
+
+            public static Bucket Union(IEnumerable<Bucket> buckets)
+            {
+                var c = new Bucket();
+                foreach (var item in buckets)
+                {
+                    c.AddRange(item);
+                }
+                return c;
             }
 
             internal void Write(BinaryWriterEx bw, int index)
@@ -194,6 +259,16 @@ namespace SoulsFormats
                 bw.FillInt32($"FileHeadersOffset{index}", (int)bw.Position);
                 for (int i = 0; i < Count; i++)
                     this[i].Write(bw, game, index, i);
+            }
+
+            public IEnumerator<FileHeader> GetEnumerator()
+            {
+                return ((IEnumerable<FileHeader>)_ofiles).GetEnumerator();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return ((IEnumerable)_ofiles).GetEnumerator();
             }
         }
 
