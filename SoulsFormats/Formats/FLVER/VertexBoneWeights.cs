@@ -22,6 +22,8 @@ namespace SoulsFormats
             /// </summary>
             public int Length => 4;
 
+            public float Sum => A + B + C + D;
+
             /// <summary>
             /// Accesses bone weights as a float[4].
             /// </summary>

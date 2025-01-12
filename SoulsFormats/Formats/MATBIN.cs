@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Text;
 
 namespace SoulsFormats
 {
@@ -44,6 +45,37 @@ namespace SoulsFormats
             SourcePath = "";
             Params = new List<Param>();
             Samplers = new List<Sampler>();
+        }
+
+        public MATBIN(MATBIN clone)
+        {
+            ShaderPath = clone.ShaderPath;
+            SourcePath = clone.SourcePath;
+            Key = clone.Key;
+            Params = CloneParams(clone);
+            Samplers = CloneSamplers(clone);
+        }
+
+        public static List<Param> CloneParams(MATBIN clone)
+        {
+            var retval = new List<Param>();
+            for (int i = 0; i < clone.Params.Count; i++)
+            {
+                var c = clone.Params[i];
+                retval.Add(new Param(c.Name, c.Value, c.Key, c.Type));
+            }
+            return retval;
+        }
+
+        public static List<Sampler> CloneSamplers(MATBIN clone)
+        {
+            var retval = new List<Sampler>();
+            for (int i = 0; i < clone.Samplers.Count; i++)
+            {
+                var c = clone.Samplers[i];
+                retval.Add(new Sampler(c.Type, c.Path, c.Key, c.Unk14));
+            }
+            return retval;
         }
 
         /// <summary>
@@ -214,6 +246,14 @@ namespace SoulsFormats
                 Value = 0;
             }
 
+            public Param(string name, object value, uint key, ParamType type)
+            {
+                Name = name;
+                Value = value;
+                Key = key;
+                Type = type;
+            }
+
             internal Param(BinaryReaderEx br)
             {
                 Name = br.GetUTF16(br.ReadInt64());
@@ -297,6 +337,35 @@ namespace SoulsFormats
             {
                 return HashCode.Combine(Name, Value, Key, Type);
             }
+
+            public override string ToString()
+            {
+                var sb = new StringBuilder();
+                sb.Append($"{Name}: ");
+                switch (Type)
+                {
+                    default:
+                    case ParamType.Bool:
+                    case ParamType.Int:
+                    case ParamType.Float:
+                        sb.Append($"{Value}");
+                        break;
+                    case ParamType.Int2:
+                        sb.Append("[ ");
+                        sb.Append(string.Join(',', (int[])Value));
+                        sb.Append(" ]");
+                        break;
+                    case ParamType.Float2:
+                    case ParamType.Float3:
+                    case ParamType.Float4:
+                    case ParamType.Float5:
+                        sb.Append("[ ");
+                        sb.Append(string.Join(',', (float[])Value));
+                        sb.Append(" ]");
+                        break;
+                }
+                return sb.ToString();
+            }
         }
 
         /// <summary>
@@ -340,6 +409,14 @@ namespace SoulsFormats
                 Key = br.ReadUInt32();
                 Unk14 = br.ReadVector2();
                 br.AssertPattern(0x14, 0x00);
+            }
+
+            public Sampler(string type, string path, uint key, Vector2 unk14)
+            {
+                Type = type;
+                Path = path;
+                Key = key;
+                Unk14 = unk14;
             }
 
             internal void Write(BinaryWriterEx bw, int index)

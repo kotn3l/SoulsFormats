@@ -5,7 +5,7 @@ namespace SoulsFormats
 {
     public partial class MSB
     {
-        internal enum ShapeType : uint
+        public enum ShapeType : uint
         {
             None = 0xFFFFFFFF,
             Point = 0,
@@ -22,7 +22,7 @@ namespace SoulsFormats
         /// </summary>
         public abstract class Shape
         {
-            internal abstract ShapeType Type { get; }
+            public abstract ShapeType Type { get; }
             internal abstract bool HasShapeData { get; }
 
             /// <summary>
@@ -58,7 +58,7 @@ namespace SoulsFormats
             /// </summary>
             public class Point : Shape
             {
-                internal override ShapeType Type => ShapeType.Point;
+                public override ShapeType Type => ShapeType.Point;
                 internal override bool HasShapeData => false;
 
                 /// <summary>
@@ -75,7 +75,7 @@ namespace SoulsFormats
             /// </summary>
             public class Circle : Shape
             {
-                internal override ShapeType Type => ShapeType.Circle;
+                public override ShapeType Type => ShapeType.Circle;
                 internal override bool HasShapeData => true;
 
                 /// <summary>
@@ -120,7 +120,7 @@ namespace SoulsFormats
             /// </summary>
             public class Sphere : Shape
             {
-                internal override ShapeType Type => ShapeType.Sphere;
+                public override ShapeType Type => ShapeType.Sphere;
                 internal override bool HasShapeData => true;
 
                 /// <summary>
@@ -165,7 +165,7 @@ namespace SoulsFormats
             /// </summary>
             public class Cylinder : Shape
             {
-                internal override ShapeType Type => ShapeType.Cylinder;
+                public override ShapeType Type => ShapeType.Cylinder;
                 internal override bool HasShapeData => true;
 
                 /// <summary>
@@ -218,7 +218,7 @@ namespace SoulsFormats
             /// </summary>
             public class Rectangle : Shape
             {
-                internal override ShapeType Type => ShapeType.Rectangle;
+                public override ShapeType Type => ShapeType.Rectangle;
                 internal override bool HasShapeData => true;
 
                 /// <summary>
@@ -271,7 +271,7 @@ namespace SoulsFormats
             /// </summary>
             public class Box : Shape
             {
-                internal override ShapeType Type => ShapeType.Box;
+                public override ShapeType Type => ShapeType.Box;
                 internal override bool HasShapeData => true;
 
                 /// <summary>
@@ -332,7 +332,7 @@ namespace SoulsFormats
             /// </summary>
             public class Composite : Shape
             {
-                internal override ShapeType Type => ShapeType.Composite;
+                public override ShapeType Type => ShapeType.Composite;
                 internal override bool HasShapeData => true;
 
                 /// <summary>

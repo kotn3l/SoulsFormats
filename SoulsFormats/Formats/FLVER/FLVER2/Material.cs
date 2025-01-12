@@ -11,6 +11,108 @@ namespace SoulsFormats
 {
     public partial class FLVER2
     {
+        public enum ModelMask
+        {
+            None = -1,
+            UpperFace = 0,
+            Chin = 1,
+            NoseAndCheeks = 2,
+            EarsAndTopOfHead = 3,
+            Neck = 4,
+            LowerNeck = 5,
+            Chest = 6,
+            UpperElbows = 7,
+            Shoulders = 8,
+            LowerElbows = 9,
+            LowerArms = 10,
+            RightHand = 11,
+            Waist = 12,
+            LeftHand = 13,
+            Knees = 14,
+            LowerLegs = 15,
+            Feet = 16,
+            Eyepatch = 17,
+            _18 = 18,
+            _19 = 19,
+            ArmsLongGlovesLowerArmOnly = 20,
+            ArmsLongGlovesFullLength = 21,
+            _22 = 22,
+            BodyScarfHighCollarCompressed = 23,
+            BodySleevesBunchedToElbow = 24,
+            BodySleevesBunchedMidway = 25,
+            BodySleevesFullSize = 26,
+            BodyLargeSleevesBunchedToElbow = 27,
+            BodyLargeSleevesFullSize = 28,
+            BodySleevesWristBracelets = 29,
+            BodyCouterElbowArmor = 30,
+            BodyCouterElbowArmorHigherUp = 31,
+            BodySmallCollar = 32,
+            BodySmallCollarCompressed = 33,
+            BodyScarfHighCollarFullSize = 34,
+            BodyLowerAbdomenCover = 35,
+            BodySmallHoodDown = 36,
+            BodySmallHoodUp = 37,
+            BodyLeftPauldronShoulder = 38,
+            BodyRightPauldronShoulder = 39,
+            BodyCowl = 40,
+            BodyCowlLong = 41,
+            BodyCowlMid = 42,
+            BodyCowlCompressed = 43,
+            HeadGorgetNeckpiece = 44,
+            HeadGorgetNeckpieceCompressed = 45,
+            HeadLongHoodPlumeLow = 46,
+            HeadLongHoodPlumeMid = 47,
+            HeadLongHoodPlumeHigh = 48,
+            HeadLongHoodPlumeShort = 49,
+            LegsHighWaistbelt = 50,
+            LegsLeggings = 51,
+            LegsLeggingsCompressed = 52,
+            LegsKneepads = 53,
+            LegsKneepadsCompressed = 54,
+            LegsWaistbelt = 55,
+            LegsWaistbeltCompressed = 56,
+            LegsWaistcloth = 57,
+            LegsWaistclothCompressed = 58,
+            LegsPantsBigThighs = 59,
+            HairFront = 60,
+            HairForehead = 61,
+            HairUnderHelmet = 62,
+            HairOverHeadband = 63,
+            HairFull = 64,
+            HairBackOfHead = 65,
+            LongHairBraidTailLow = 66,
+            LongHairBraidTailHigh = 67,
+            LongHairBraidTailHighest = 68,
+            LongHairBraidTailLowestShortest = 69,
+            HeadGorgetNeckpieceLarge = 70,
+            BodyLongShirtBunchedUpIntoBelt = 71,
+            BodyLongShirtFullLengthOverWaist = 72,
+            BareTorsoAndUpperArms = 73,
+            BodyGravekeeperCloakHoodDown = 74,
+            BodyGravekeeperCloakHoodUp = 75,
+            LowerNeckWrap = 76,
+            _77 = 77,
+            BeardJaw = 78,
+            BeardChin = 79,
+            BeardStubble = 80,
+            _81 = 81,
+            _82 = 82,
+            _83 = 83,
+            _84 = 84,
+            _85 = 85,
+            _86 = 86,
+            _87 = 87,
+            _88 = 88,
+            _89 = 89,
+            _90 = 90,
+            _91 = 91,
+            _92 = 92,
+            _93 = 93,
+            _94 = 94,
+            _95 = 95
+        }
+
+
         /// <summary>
         /// A reference to an MTD file, specifying textures to use.
         /// </summary>
@@ -20,6 +122,8 @@ namespace SoulsFormats
             /// Identifies the mesh that uses this material, may include keywords that determine hideable parts.
             /// </summary>
             public string Name { get; set; }
+
+            public ModelMask MaskId { get; set; }
 
             /// <summary>
             /// Virtual path to an MTD file or a Matxml file in games since ER.
@@ -97,15 +201,28 @@ namespace SoulsFormats
                 Index = br.ReadInt32();
                 br.AssertInt32(0);
 
+                string tempName;
                 if (header.Unicode)
                 {
-                    Name = br.GetUTF16(nameOffset);
+                    tempName = br.GetUTF16(nameOffset);
                     MTD = br.GetUTF16(mtdOffset);
                 }
                 else
                 {
-                    Name = br.GetShiftJIS(nameOffset);
+                    tempName = br.GetShiftJIS(nameOffset);
                     MTD = br.GetShiftJIS(mtdOffset);
+                }
+
+
+                if (tempName.StartsWith('#'))
+                {
+                    Name = tempName[4..];
+                    MaskId = (ModelMask)int.Parse(tempName[1..3]);
+                }
+                else
+                {
+                    Name = tempName;
+                    MaskId = ModelMask.None;
                 }
 
                 if (gxOffset == 0)
@@ -174,10 +291,17 @@ namespace SoulsFormats
             internal void WriteStrings(BinaryWriterEx bw, FLVERHeader header, int index)
             {
                 bw.FillInt32($"MaterialName{index}", (int)bw.Position);
+
+                string tempName = Name;
+                if (MaskId != ModelMask.None)
+                {
+                    tempName = $"#{MaskId:00}#{Name}";
+                }
+
                 if (header.Unicode)
-                    bw.WriteUTF16(Name, true);
+                    bw.WriteUTF16(tempName, true);
                 else
-                    bw.WriteShiftJIS(Name, true);
+                    bw.WriteShiftJIS(tempName, true);
 
                 bw.FillInt32($"MaterialMTD{index}", (int)bw.Position);
                 if (header.Unicode)

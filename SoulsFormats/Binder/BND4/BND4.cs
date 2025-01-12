@@ -17,6 +17,8 @@ namespace SoulsFormats
         /// </summary>
         public List<BinderFile> Files { get; set; }
 
+        public Dictionary<string, List<BinderFile>> FilesByExtension { get; set; }
+
         /// <summary>
         /// A timestamp or version number, 8 characters maximum.
         /// </summary>
@@ -65,6 +67,8 @@ namespace SoulsFormats
         public BND4()
         {
             Files = new List<BinderFile>();
+            //FilesByName = new Dictionary<string, BinderFile>();
+            FilesByExtension = new Dictionary<string, List<BinderFile>>();
             Version = SFUtil.DateToBinderTimestamp(DateTime.Now);
             Format = Binder.Format.IDs | Binder.Format.Names1 | Binder.Format.Names2 | Binder.Format.Compression;
             Unicode = true;
@@ -91,8 +95,23 @@ namespace SoulsFormats
             _mappedMemory = owner;
             List<BinderFileHeader> fileHeaders = ReadHeader(this, br);
             Files = new List<BinderFile>(fileHeaders.Count);
+            //FilesByName = new Dictionary<string, BinderFile>();
+            FilesByExtension = new Dictionary<string, List<BinderFile>>();
             foreach (BinderFileHeader fileHeader in fileHeaders)
-                Files.Add(fileHeader.ReadFileData(br));
+            {
+                var bndh = fileHeader.ReadFileData(br);
+                string filename = Path.GetFileName(bndh.Name);
+                string extension = Path.GetExtension(bndh.Name);
+                Files.Add(bndh);
+                //FilesByName.Add(filename, bndh);
+                if (FilesByExtension.TryGetValue(extension, out List<BinderFile> value))
+                {
+                    value.Add(bndh);
+                }
+                else FilesByExtension.Add(extension, [bndh]);
+
+            }
+                
         }
 
         internal static List<BinderFileHeader> ReadHeader(IBND4 bnd, BinaryReaderEx br)

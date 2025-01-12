@@ -96,11 +96,42 @@ namespace SoulsFormats
         };
 
         private static byte[] DX10Formats = { 6, 100, 102, 106, 107, 112, 113 };
-
+        public static DDS.DXGI_FORMAT GetDXGIFormatFromFourCC(string str)
+        {
+            switch (str)
+            {
+                case "DXT1":
+                    return DDS.DXGI_FORMAT.BC1_UNORM_SRGB;
+                case "DXT3":
+                    return DDS.DXGI_FORMAT.BC2_UNORM_SRGB;
+                case "DXT5":
+                    return DDS.DXGI_FORMAT.BC3_UNORM_SRGB;
+                case "ATI1":
+                case "BC4U":
+                    return DDS.DXGI_FORMAT.BC4_UNORM; // Monogame workaround :fatcat:
+                case "ATI2":
+                    return DDS.DXGI_FORMAT.BC5_UNORM;
+                // From wtf
+                case "q\0\0\0":
+                    return DDS.DXGI_FORMAT.R16G16B16A16_UNORM;
+                default:
+                    throw new Exception($"Unknown DDS Type: {str}");
+            }
+        }
         public static Memory<byte> Headerize(TPF.Texture texture)
         {
             if (SFEncoding.ASCII.GetString(texture.Bytes.Span[..4].ToArray(), 0, 4) == "DDS ")
+            {
+                var d = new DDS(texture.Bytes);
+                texture.Header = new TPF.TexHeader();
+                texture.Header.Width = (short)d.dwWidth;
+                texture.Header.Height = (short)d.dwHeight;
+                texture.Header.DXGIFormat = d.header10 == null ? (int)GetDXGIFormatFromFourCC(d.ddspf.dwFourCC) : (int)d.header10.dxgiFormat;
+                //texture.Header.
+
                 return texture.Bytes;
+            }
+                
 
             var dds = new DDS();
             byte format = texture.Format;

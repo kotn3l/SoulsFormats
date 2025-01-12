@@ -176,6 +176,10 @@ namespace SoulsFormats
                     foreach (VertexBuffer buffer in VertexBuffers)
                         buffer.ReadBuffer(br, layouts, Vertices, vertexCount, dataOffset, header);
                 }
+                else
+                {
+                    Vertices = new List<FLVER.Vertex>();
+                }
             }
 
             internal void Write(BinaryWriterEx bw, int index)
