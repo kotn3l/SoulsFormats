@@ -135,25 +135,14 @@ namespace SoulsFormats
         /// </summary>
         public enum Game
         {
-            /// <summary>
-            /// Dark Souls 1, both PC and console versions.
-            /// </summary>
-            DarkSouls1,
-
-            /// <summary>
-            /// Dark Souls 2 and Scholar of the First Sin on PC.
-            /// </summary>
-            DarkSouls2,
-
-            /// <summary>
-            /// Dark Souls 3 and Sekiro on PC.
-            /// </summary>
-            DarkSouls3,
-
-            /// <summary>
-            /// Elden Ring on PC.
-            /// </summary>
-            EldenRing,
+            EldenRing = 0,
+            Sekiro = 1,
+            Bloodborne = 2,
+            DarkSouls3 = 3,
+            DarkSoulsRemastered = 4,
+            DarkSouls1 = 5,
+            ArmoredCore6 = 6,
+            DarkSouls2
         }
 
         /// <summary>

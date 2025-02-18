@@ -59,7 +59,7 @@ namespace SoulsFormats
         /// </summary>
         public byte Extended { get; set; }
         
-        private IMappedMemoryOwner _mappedMemory = null;
+        private IMappedMemory _mappedMemory = null;
 
         /// <summary>
         /// Creates an empty BND4 formatted for DS3.
@@ -90,7 +90,7 @@ namespace SoulsFormats
         /// <summary>
         /// Deserializes file data from a stream.
         /// </summary>
-        protected override void Read(BinaryReaderEx br, IMappedMemoryOwner owner)
+        protected override void Read(BinaryReaderEx br, IMappedMemory owner)
         {
             _mappedMemory = owner;
             List<BinderFileHeader> fileHeaders = ReadHeader(this, br);

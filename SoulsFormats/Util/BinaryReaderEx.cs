@@ -8,6 +8,8 @@ using System.Numerics;
 using System.Text;
 using DotNext.Buffers;
 using CommunityToolkit.HighPerformance;
+using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace SoulsFormats
 {
@@ -52,20 +54,27 @@ namespace SoulsFormats
             _steps = new Stack<long>();
             _memory = memory;
         }
-        
+
         public unsafe T Read<T>() where T : unmanaged
         {
-            var reader = new SpanReader<byte>(_memory.Span[(int)Position..]);
-            var ret = reader.Read<T>();
+            var span = _memory.Span.Slice((int)Position, sizeof(T));
             Position += sizeof(T);
-            return ret;
+            return MemoryMarshal.Read<T>(span);
         }
 
         public unsafe T[] ReadMulti<T>(int count) where T : unmanaged
         {
-            var ret = _memory.Span.Slice((int)Position, sizeof(T) * count).Cast<byte, T>().ToArray();
-            Position += sizeof(T) * count;
-            return ret;
+            var span = _memory.Span.Slice((int)Position, count * sizeof(T));
+            Position += count * sizeof(T);
+
+            T[] buffer = new T[count];
+
+            ref byte src = ref MemoryMarshal.GetReference(span);
+            ref T dst = ref MemoryMarshal.GetArrayDataReference(buffer);
+
+            Unsafe.CopyBlockUnaligned(ref Unsafe.As<T, byte>(ref dst), ref src, (uint)(sizeof(T) * count));
+
+            return buffer;
         }
 
         public unsafe Span<T> ReadSpanView<T>(int count) where T : unmanaged
