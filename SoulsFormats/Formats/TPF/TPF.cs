@@ -257,7 +257,7 @@ namespace SoulsFormats
                     else if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
                     {
                         Header.TextureCount = br.AssertInt32([1, 6]);
-                        Header.Unk2 = br.AssertInt32(0xD);
+                        Header.Unk2 = br.AssertInt32([0xD, 0x8]);
                     }
                 }
 
@@ -419,6 +419,7 @@ namespace SoulsFormats
             /// Headerless DDS with DX10 metadata.
             /// </summary>
             Xbone = 5,
+            PS5 = 6,
         }
 
         /// <summary>
@@ -444,7 +445,7 @@ namespace SoulsFormats
             /// <summary>
             /// Unknown
             /// </summary>
-            UnknownAC6 = 3,
+            TextureArray = 3,
         }
 
         /// <summary>
