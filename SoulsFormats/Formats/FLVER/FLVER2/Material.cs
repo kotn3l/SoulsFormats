@@ -1,12 +1,6 @@
-﻿using SoulsFormats;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-// FLVER implementation for Model Editor usage
-// Credit to The12thAvenger
 namespace SoulsFormats
 {
     public partial class FLVER2
@@ -153,7 +147,7 @@ namespace SoulsFormats
             /// </summary>
             public Material()
             {
-                Name = "Untitled";
+                Name = "";
                 MTD = "";
                 Textures = new List<Texture>();
                 GXIndex = -1;
@@ -183,7 +177,7 @@ namespace SoulsFormats
                     numStringBytes += texture.Type.Length + 1;
                     numStringBytes += texture.Path.Length + 1;
                 }
-
+                
                 // 2-bytes per character
                 numStringBytes *= 2;
                 return numStringBytes;
@@ -217,7 +211,11 @@ namespace SoulsFormats
                 if (tempName.StartsWith('#'))
                 {
                     Name = tempName[4..];
-                    MaskId = (ModelMask)int.Parse(tempName[1..3]);
+                    if (tempName[1..3].EndsWith('#'))
+                    {
+                        MaskId = (ModelMask)int.Parse(tempName[1..2]);
+                    }
+                    else MaskId = (ModelMask)int.Parse(tempName[1..3]);
                 }
                 else
                 {
@@ -242,7 +240,7 @@ namespace SoulsFormats
                     }
                     GXIndex = gxListIndices[gxOffset];
                 }
-
+                
             }
 
             internal void TakeTextures(Dictionary<int, Texture> textureDict)
@@ -316,10 +314,6 @@ namespace SoulsFormats
             public override string ToString()
             {
                 return $"{Name} | {MTD}";
-            }
-            public Material Clone()
-            {
-                return (Material)MemberwiseClone();
             }
         }
     }

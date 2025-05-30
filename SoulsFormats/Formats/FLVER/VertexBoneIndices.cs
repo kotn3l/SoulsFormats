@@ -22,6 +22,8 @@ namespace SoulsFormats
             /// </summary>
             public int Length => 4;
 
+            public bool IsTheSame => (A == B) && (C == D) && (A == C) && (A == D) && (B == C) && (B == D);
+
             /// <summary>
             /// Accesses bone indices as an int[4].
             /// </summary>
