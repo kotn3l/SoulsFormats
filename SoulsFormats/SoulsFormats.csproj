@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net8.0</TargetFrameworks>
+    <TargetFrameworks>net9.0</TargetFrameworks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <LangVersion>12</LangVersion>
     <Copyright>Copyright © Joseph Anderson 2019</Copyright>
@@ -25,6 +25,7 @@
 	  <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
 	  <PackageReference Include="System.Text.Json" Version="8.0.5" />
 	  <PackageReference Include="ZstdNet" Version="1.4.5" />
+	  <PackageReference Include="DrSwizzler" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>

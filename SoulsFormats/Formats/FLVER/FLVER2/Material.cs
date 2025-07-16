@@ -210,7 +210,7 @@ namespace SoulsFormats
 
                 if (tempName.StartsWith('#'))
                 {
-                    Name = tempName[4..];
+                    Name =  tempName.Length > 4 ? tempName[4] == '_' ? tempName[5..] : tempName[4..] : string.Empty;
                     if (tempName[1..3].EndsWith('#'))
                     {
                         MaskId = (ModelMask)int.Parse(tempName[1..2]);
@@ -293,7 +293,7 @@ namespace SoulsFormats
                 string tempName = Name;
                 if (MaskId != ModelMask.None)
                 {
-                    tempName = $"#{MaskId:00}#{Name}";
+                    tempName = $"#{(int)MaskId:00}#_{Name}";
                 }
 
                 if (header.Unicode)

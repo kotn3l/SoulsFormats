@@ -1,12 +1,6 @@
-﻿using SoulsFormats;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-// FLVER implementation for Model Editor usage
-// Credit to The12thAvenger
 namespace SoulsFormats
 {
     public partial class FLVER2
@@ -48,7 +42,12 @@ namespace SoulsFormats
 
                     TerminatorID = br.AssertInt32(id);
                     br.AssertInt32(100);
-                    TerminatorLength = br.ReadInt32() - 0xC;
+                    int lengthSubtraction = 0xC;
+                    if(header.Unk68 == 0x5)
+                    {
+                        lengthSubtraction = 0;
+                    }
+                    TerminatorLength = br.ReadInt32() - lengthSubtraction;
                     br.AssertPattern(TerminatorLength, 0x00);
                 }
             }
@@ -69,11 +68,6 @@ namespace SoulsFormats
                     bw.WriteInt32(TerminatorLength + 0xC);
                     bw.WritePattern(TerminatorLength, 0x00);
                 }
-            }
-
-            public GXList Clone()
-            {
-                return (GXList)MemberwiseClone();
             }
         }
 
@@ -148,10 +142,6 @@ namespace SoulsFormats
                 bw.WriteInt32(Unk04);
                 bw.WriteInt32(Data.Length + 0xC);
                 bw.WriteBytes(Data);
-            }
-            public GXItem Clone()
-            {
-                return (GXItem)MemberwiseClone();
             }
         }
     }

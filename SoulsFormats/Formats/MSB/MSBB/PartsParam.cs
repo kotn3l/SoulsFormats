@@ -1172,7 +1172,8 @@ namespace SoulsFormats
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
                     Good = 0,
                     Dark = 1,
-                    PitchDark = 2
+                    PitchDark = 2,
+                    Unk = 255
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
                 }
 

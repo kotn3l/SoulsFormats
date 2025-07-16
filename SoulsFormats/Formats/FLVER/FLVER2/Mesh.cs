@@ -1,14 +1,8 @@
-﻿using SoulsFormats;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
-// FLVER implementation for Model Editor usage
-// Credit to The12thAvenger
 namespace SoulsFormats
 {
     public partial class FLVER2
@@ -24,9 +18,13 @@ namespace SoulsFormats
             /// The mesh is assumed to not be in bind pose and the transform of the bound node is applied to each vertex.
             /// </summary>
             public bool UseBoneWeights { get; set; }
-
+            
             /// <inheritdoc cref="IFlverMesh.Dynamic"/>
-            public byte Dynamic => (byte)(UseBoneWeights ? 1 : 0);
+            public byte Dynamic
+            {
+                get => (byte)(UseBoneWeights ? 1 : 0);
+                set => UseBoneWeights = value == 1;
+            }
 
             /// <summary>
             /// Index of the material used by all triangles in this mesh.
@@ -34,7 +32,7 @@ namespace SoulsFormats
             public int MaterialIndex { get; set; }
 
             /// <summary>
-            /// Index of the node representing this mesh in the <see cref="FLVER2.Nodes"/> list.
+            /// Index of the node representing this mesh in the <see cref="Nodes"/> list.
             /// </summary>
             public int NodeIndex { get; set; }
 
@@ -63,7 +61,6 @@ namespace SoulsFormats
             /// Optional bounding box struct; may be null.
             /// </summary>
             public BoundingBoxes BoundingBox { get; set; }
-            public int VertexCount => Vertices.Count;
 
             private int[] faceSetIndices, vertexBufferIndices;
 
@@ -97,7 +94,7 @@ namespace SoulsFormats
                 int faceSetOffset = br.ReadInt32();
                 int vertexBufferCount = br.ReadInt32();
                 int vertexBufferOffset = br.ReadInt32();
-
+                
                 if (boundingBoxOffset != 0)
                 {
                     br.StepIn(boundingBoxOffset);
@@ -117,11 +114,13 @@ namespace SoulsFormats
                 FaceSets = new List<FaceSet>(faceSetIndices.Length);
                 foreach (int i in faceSetIndices)
                 {
-                    if (!faceSetDict.TryGetValue(i, out FaceSet value))
-                        throw new NotSupportedException("Face set not found or already taken: " + i);
+                    if (!faceSetDict.ContainsKey(i))
+                        throw new NotSupportedException("Face set not found: " + i);
 
-                    FaceSets.Add(value);
-                    faceSetDict.Remove(i);
+                    FaceSets.Add(faceSetDict[i]);
+
+                    // Removed for shared meshes support
+                    //faceSetDict.Remove(i);
                 }
                 faceSetIndices = null;
             }
@@ -131,11 +130,13 @@ namespace SoulsFormats
                 VertexBuffers = new List<VertexBuffer>(vertexBufferIndices.Length);
                 foreach (int i in vertexBufferIndices)
                 {
-                    if (!vertexBufferDict.TryGetValue(i, out VertexBuffer value))
-                        throw new NotSupportedException("Vertex buffer not found or already taken: " + i);
+                    if (!vertexBufferDict.ContainsKey(i))
+                        throw new NotSupportedException("Vertex buffer not found: " + i);
 
-                    VertexBuffers.Add(value);
-                    vertexBufferDict.Remove(i);
+                    VertexBuffers.Add(vertexBufferDict[i]);
+
+                    // Removed for shared meshes support
+                    //vertexBufferDict.Remove(i);
                 }
                 vertexBufferIndices = null;
 
@@ -165,20 +166,26 @@ namespace SoulsFormats
                 int uvCap = layoutMembers.Count(m => m.Semantic == FLVER.LayoutSemantic.UV);
                 int tanCap = layoutMembers.Count(m => m.Semantic == FLVER.LayoutSemantic.Tangent);
                 int colorCap = layoutMembers.Count(m => m.Semantic == FLVER.LayoutSemantic.VertexColor);
+                bool posfilled = layoutMembers.Any(m => m.Semantic == FLVER.LayoutSemantic.Position && m.Type != FLVER.LayoutType.EdgeCompressed);
 
-                if (VertexBuffers.Count > 0)
+                int vertexCount = VertexBuffers.Count > 0 ? VertexBuffers[0].VertexCount : 0;
+                Vertices = new List<FLVER.Vertex>(vertexCount);
+                for (int i = 0; i < vertexCount; i++)
+                    Vertices.Add(new FLVER.Vertex(uvCap, tanCap, colorCap));
+
+                foreach (VertexBuffer buffer in VertexBuffers)
                 {
-                    int vertexCount = VertexBuffers[0].VertexCount;
-                    Vertices = new List<FLVER.Vertex>(vertexCount);
-                    for (int i = 0; i < vertexCount; i++)
-                        Vertices.Add(new FLVER.Vertex(uvCap, tanCap, colorCap));
-
-                    foreach (VertexBuffer buffer in VertexBuffers)
-                        buffer.ReadBuffer(br, layouts, Vertices, vertexCount, dataOffset, header);
+                    // TODO: EdgeGeom
+                    // The other facesets repeat the same edge vertex information so the first one may be all that is needed
+                    var edgeIndexGroups = FaceSets.Count > 0 ? FaceSets[0].EdgeIndexGroups : new List<EdgeIndexGroup>();
+                    buffer.ReadBuffer(br, layouts, Vertices, edgeIndexGroups, dataOffset, header.Version, posfilled);
                 }
-                else
+
+                // TODO: EdgeGeom
+                // Destroy unused edge index groups for now
+                foreach (var faceset in FaceSets)
                 {
-                    Vertices = new List<FLVER.Vertex>();
+                    faceset.EdgeIndexGroups = null;
                 }
             }
 
@@ -256,11 +263,6 @@ namespace SoulsFormats
                 }
             }
 
-            public Mesh Clone()
-            {
-                return (Mesh)MemberwiseClone();
-            }
-
             /// <summary>
             /// An optional bounding box for meshes added in DS2.
             /// </summary>
@@ -304,11 +306,6 @@ namespace SoulsFormats
                     bw.WriteVector3(Max);
                     if (header.Version >= 0x2001A)
                         bw.WriteVector3(Unk);
-                }
-
-                public BoundingBoxes Clone()
-                {
-                    return (BoundingBoxes)MemberwiseClone();
                 }
             }
         }

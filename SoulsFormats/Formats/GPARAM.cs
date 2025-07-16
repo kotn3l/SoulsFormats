@@ -683,7 +683,7 @@ namespace SoulsFormats
 
             float Unk04 { get; set; }
 
-            object Value { get; }
+            object Value { get; set; }
         }
 
         public class FieldValue<T> : GPARAM.IFieldValue
@@ -694,7 +694,17 @@ namespace SoulsFormats
 
             public T Value { get; set; }
 
-            object GPARAM.IFieldValue.Value => (object)this.Value;
+            object GPARAM.IFieldValue.Value
+            {
+                get
+                {
+                   return (object)this.Value;
+                }
+                set
+                {
+                    this.Value = (T)value;
+                }
+            }
 
             public FieldValue()
             {

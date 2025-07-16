@@ -1,12 +1,5 @@
-﻿using SoulsFormats;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
 
-// FLVER implementation for Model Editor usage
-// Credit to The12thAvenger
 namespace SoulsFormats
 {
     public static partial class FLVER
@@ -108,6 +101,15 @@ namespace SoulsFormats
                 bw.WriteByte((byte)Math.Round(G * 255));
                 bw.WriteByte((byte)Math.Round(B * 255));
                 bw.WriteByte((byte)Math.Round(A * 255));
+            }
+
+            /// <summary>
+            /// Returns a string representation of the <see cref="VertexColor"/>.
+            /// </summary>
+            /// <returns>A string representation of the <see cref="VertexColor"/>.</returns>
+            public override string ToString()
+            {
+                return $"<R:{R}, G:{G}, B:{B}, A:{A}>";
             }
         }
     }

@@ -156,6 +156,7 @@ namespace SoulsFormats
             /// </summary>
             EldenRing = 6,
             ArmoredCore6 = 7,
+            Nightreign = 8,
         }
 
         /// <summary>
@@ -199,6 +200,16 @@ namespace SoulsFormats
                 {
                     _kfiles[key] = value;
                 }*/
+            }
+
+            public bool Any(ulong key)
+            {
+                return _kfiles.ContainsKey(key);
+            }
+
+            public bool TryGet(ulong key, out FileHeader fh)
+            {
+                return _kfiles.TryGetValue(key, out fh);
             }
 
             public void Add(FileHeader fh, int i)

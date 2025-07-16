@@ -1,13 +1,8 @@
-﻿using SoulsFormats;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
-// FLVER implementation for Model Editor usage
-// Credit to The12thAvenger
 namespace SoulsFormats
 {
     /// <summary>
@@ -41,7 +36,6 @@ namespace SoulsFormats
         /// List of <see cref="FLVER.Node"/> objects.
         /// </summary>
         public List<FLVER.Node> Nodes { get; set; }
-        public List<FLVER.Node> Bones => Nodes;
         IReadOnlyList<FLVER.Node> IFlver.Nodes => Nodes;
 
         /// <summary>
@@ -73,10 +67,6 @@ namespace SoulsFormats
             Meshes = new List<Mesh>();
             BufferLayouts = new List<BufferLayout>();
         }
-        public FLVER2 Clone()
-        {
-            return (FLVER2)MemberwiseClone();
-        }
 
         /// <summary>
         /// Returns true if the data appears to be a FLVER.
@@ -106,16 +96,17 @@ namespace SoulsFormats
             br.BigEndian = Header.BigEndian;
 
             // Gundam Unicorn: 0x20005, 0x2000E
-            // ACVD: 
             // DS1: 2000B (PS3 o0700/1), 2000C, 2000D
+            // ACVD: 2000F
             // DS2 NT: 2000F, 20010
             // DS2: 20010, 20009 (armor 9320)
             // SFS: 20010
             // BB:  20013, 20014
             // DS3: 20013, 20014
             // SDT: 2001A, 20016 (test chr)
-            // AC6: 2001B
-            Header.Version = br.AssertInt32([0x20005, 0x20007, 0x20009, 0x2000B, 0x2000C, 0x2000D, 0x2000E, 0x2000F, 0x20010, 0x20013, 0x20014, 0x20016, 0x2001A, 0x2001B]);
+            // AC6: 20017, 2001B
+            // Nightreign: 20021
+            Header.Version = br.AssertInt32([0x20005, 0x20007, 0x20009, 0x2000B, 0x2000C, 0x2000D, 0x2000E, 0x2000F, 0x20010, 0x20013, 0x20014, 0x20016, 0x20017, 0x2001A, 0x2001B, 0x20021]);
 
             int dataOffset = br.ReadInt32();
             br.ReadInt32(); // Data length
@@ -149,14 +140,24 @@ namespace SoulsFormats
 
             br.AssertInt32(0);
             br.AssertInt32(0);
-            Header.Unk68 = br.AssertInt32([0, 1, 2, 3, 4]);
-            //Header.Unk68 = br.ReadInt32();
+
+            if (Header.Version >= 0x2001A)
+            {
+                Header.Unk68 = br.AssertInt16([0, 1, 2, 3, 4, 5]);
+                Header.SpecialModifier = br.AssertInt16([0, -32768]);
+            }
+            else
+            {
+                Header.Unk68 = br.AssertInt32([0, 1, 2, 3, 4, 5]);
+            }
+
             br.AssertInt32(0);
             br.AssertInt32(0);
             Header.Unk74 = br.AssertInt32([0, 0x10]);
             br.AssertInt32(0);
             br.AssertInt32(0);
 
+            bool isSpeedTree = IsSpeedtree();
             Dummies = new List<FLVER.Dummy>(dummyCount);
             for (int i = 0; i < dummyCount; i++)
                 Dummies.Add(new FLVER.Dummy(br, Header.Version));
@@ -185,7 +186,7 @@ namespace SoulsFormats
 
             BufferLayouts = new List<BufferLayout>(bufferLayoutCount);
             for (int i = 0; i < bufferLayoutCount; i++)
-                BufferLayouts.Add(new BufferLayout(br));
+                BufferLayouts.Add(new BufferLayout(br, isSpeedTree));
 
             var textures = new List<Texture>(textureCount);
             for (int i = 0; i < textureCount; i++)
@@ -210,10 +211,12 @@ namespace SoulsFormats
                 mesh.TakeVertexBuffers(vertexBufferDict, BufferLayouts);
                 mesh.ReadVertices(br, dataOffset, BufferLayouts, Header);
             }
-            if (faceSetDict.Count != 0)
-                throw new NotSupportedException("Orphaned face sets found.");
-            if (vertexBufferDict.Count != 0)
-                throw new NotSupportedException("Orphaned vertex buffers found.");
+
+            // Removed for shared meshes support
+            //if (faceSetDict.Count != 0)
+            //    throw new NotSupportedException("Orphaned face sets found.");
+            //if (vertexBufferDict.Count != 0)
+            //    throw new NotSupportedException("Orphaned vertex buffers found.");
         }
 
         /// <summary>
@@ -280,13 +283,25 @@ namespace SoulsFormats
 
             bw.WriteInt32(0);
             bw.WriteInt32(0);
-            bw.WriteInt32(Header.Unk68);
+
+            bool isSpeedTree = IsSpeedtree();
+            if (isSpeedTree)
+            {
+                bw.WriteInt16((short)Header.Unk68);
+                bw.WriteInt16(Header.SpecialModifier);
+            }
+            else
+            {
+                bw.WriteInt32(Header.Unk68);
+            }
+
             bw.WriteInt32(0);
             bw.WriteInt32(0);
             bw.WriteInt32(Header.Unk74);
             bw.WriteInt32(0);
             bw.WriteInt32(0);
 
+            
             foreach (FLVER.Dummy dummy in Dummies)
                 dummy.Write(bw, Header.Version);
 
@@ -332,11 +347,11 @@ namespace SoulsFormats
             }
 
             if (Header.Version >= 0x2001A)
-                Skeletons.Write(bw);
+                Skeletons?.Write(bw);
 
             bw.Pad(0x10);
             for (int i = 0; i < BufferLayouts.Count; i++)
-                BufferLayouts[i].WriteMembers(bw, i);
+                BufferLayouts[i].WriteMembers(bw, i, isSpeedTree);
 
             bw.Pad(0x10);
             for (int i = 0; i < Meshes.Count; i++)
@@ -440,6 +455,12 @@ namespace SoulsFormats
                 bw.Pad(0x20);
         }
 
+        /// <inheritdoc/>
+        public bool IsSpeedtree()
+        {
+            return Header.SpecialModifier == -32768;
+        }
+
         /// <summary>
         /// General metadata about a FLVER.
         /// </summary>
@@ -499,6 +520,11 @@ namespace SoulsFormats
             /// Unknown.
             /// </summary>
             public int Unk68 { get; set; }
+            
+            /// <summary>
+            /// Used to denote Speedtree if -32768. Doesn't seem to be used for anything else currently.
+            /// </summary>
+            public short SpecialModifier { get; set; }
 
             /// <summary>
             /// Unknown
@@ -513,11 +539,6 @@ namespace SoulsFormats
                 BigEndian = false;
                 Version = 0x20014;
                 Unicode = true;
-            }
-
-            public FLVERHeader Clone()
-            {
-                return (FLVERHeader)MemberwiseClone();
             }
         }
     }

@@ -78,11 +78,18 @@ namespace SoulsFormats
                 var t = new Texture(br, Platform, Flag2, Encoding);
                 Textures.Add(t);
                 FastTextureLookup.Add(t.Name, t);
-            }
+        }
         }
 
         /// <summary>
         /// Writes TPF data to a BinaryWriterEx.
+        /// 
+        /// Comments from Natsu:
+        /// SoulsFormats(originally) was padding to 4
+        /// The(console)textures pad to 0x80
+        /// SoulsFormats(originally) also did not include the extra padding on the last file which the vanilla console TPFs do for some reason, so I added that
+        /// SoulsFormats(originally) also includes padding in the data size value in the header
+        /// The vanilla TPFs do not, so I skipped adding padding to it
         /// </summary>
         protected override void Write(BinaryWriterEx bw)
         {
@@ -101,17 +108,34 @@ namespace SoulsFormats
             for (int i = 0; i < Textures.Count; i++)
                 Textures[i].WriteName(bw, i, Encoding);
 
+            int texturePaddingSize = 0x4;
+            if (Platform == TPFPlatform.PS3)
+            {
+                bw.Pad(0x100);
+                texturePaddingSize = 0x80;
+            }
+
             long dataStart = bw.Position;
+            long textureDataSize = 0;
             for (int i = 0; i < Textures.Count; i++)
             {
                 // Padding for texture data varies wildly across games,
                 // so don't worry about this too much
                 if (Textures[i].Bytes.Length > 0)
-                    bw.Pad(4);
+                    bw.Pad(texturePaddingSize);
 
-                Textures[i].WriteData(bw, i);
+                textureDataSize += Textures[i].WriteData(bw, i);
             }
-            bw.FillInt32("DataSize", (int)(bw.Position - dataStart));
+            if (Platform == TPFPlatform.PS3)
+            {
+                bw.Pad(texturePaddingSize);
+                bw.FillInt32("DataSize", (int)textureDataSize);
+            }
+            else
+            {
+                bw.FillInt32("DataSize", (int)(bw.Position - dataStart));
+            }
+
         }
 
         /// <summary>
@@ -158,7 +182,11 @@ namespace SoulsFormats
             /// The name of the texture; should not include a path or extension.
             /// </summary>
             public string Name { get; set; }
-            public string CachedName { get; set; }
+
+            /// <summary>
+            /// Indicates the hardware platform of the tpf.
+            /// </summary>
+            public TPFPlatform Platform { get; set; }
 
             /// <summary>
             /// Indicates format of the texture.
@@ -198,51 +226,100 @@ namespace SoulsFormats
             /// <summary>
             /// Creates an empty Texture.
             /// </summary>
-            public Texture()
+            public Texture(TPFPlatform platform = TPFPlatform.PC)
             {
-                CachedName = null;
                 Name = "Unnamed";
                 Bytes = new byte[0];
+                Platform = platform;
             }
 
             /// <summary>
-            /// Create a new PC Texture with the specified information; Cubemap and Mipmaps are determined based on bytes.
+            /// Create a new Texture with the specified information; Cubemap and Mipmaps are determined based on bytes.
+            /// We assume that the input texture is a standard pc .dds file
             /// </summary>
-            public Texture(string name, byte format, byte flags1, byte[] bytes)
+            public Texture(string name, byte format, byte flags1, byte[] bytes, TPFPlatform platform)
             {
-                CachedName = null;
                 Name = name;
                 Format = format;
                 Flags1 = flags1;
-                Bytes = bytes;
 
                 var dds = new DDS(bytes);
                 if (dds.dwCaps2.HasFlag(DDS.DDSCAPS2.CUBEMAP))
                     Type = TexType.Cubemap;
                 else if (dds.dwCaps2.HasFlag(DDS.DDSCAPS2.VOLUME))
                     Type = TexType.Volume;
+                else if (dds.dwDepth > 1)
+                    Type = TexType.TextureArray;
                 else
                     Type = TexType.Texture;
                 Mipmaps = (byte)dds.dwMipMapCount;
+                Platform = platform;
+
+                if (Platform == TPFPlatform.PC)
+                {
+                    Bytes = bytes;
+                    return;
+                }
+
+                Header = new TexHeader();
+                Header.DXGIFormat = (int)dds.GetDXGIFormat();
+                Header.Width = (short)dds.dwWidth;
+                Header.Height = (short)dds.dwHeight;
+                switch (Type)
+                {
+                    case TexType.Texture:
+                        Header.TextureCount = 1;
+                        break;
+                    case TexType.Cubemap:
+                        Header.TextureCount = 6;
+                        break;
+                    case TexType.Volume:
+                    case TexType.TextureArray:
+                        Header.TextureCount = dds.dwDepth;
+                        break;
+                }
+
+                var images = Headerizer.GetDDSTextureBuffers(dds, bytes);
+                switch (Platform)
+                {
+                    case TPFPlatform.Xbox360:
+                        //Bytes = Write360Images(images);
+                        throw new NotImplementedException();
+                    case TPFPlatform.Xbone:
+                        //We need a swizzling solution before we can even think about this one.
+                        throw new NotImplementedException("");
+                    case TPFPlatform.PS3:
+                        Bytes = Headerizer.WritePS3Images(images);
+                        break;
+                    case TPFPlatform.PS4:
+                        Bytes = Headerizer.WritePS4Images(images, dds, Type);
+                        Header.Unk2 = 0xD;
+                        break;
+                    case TPFPlatform.PS5:
+                        //Bytes = WritePS5Images(images);
+                        throw new NotImplementedException();
+                }
             }
 
             internal Texture(BinaryReaderEx br, TPFPlatform platform, byte flag2, byte encoding)
             {
-                CachedName = null;
-
                 uint fileOffset = br.ReadUInt32();
                 int fileSize = br.ReadInt32();
 
+                Platform = platform;
                 Format = br.ReadByte();
                 Type = br.ReadEnum8<TexType>();
                 Mipmaps = br.ReadByte();
-                Flags1 = br.AssertByte([0, 1, 2, 3]);
+                Flags1 = br.AssertByte([0, 1, 2, 3, 0x80]);
 
                 if (platform != TPFPlatform.PC)
                 {
                     Header = new TexHeader();
                     Header.Width = br.ReadInt16();
                     Header.Height = br.ReadInt16();
+
+                    //Set it here for use later so we have it one consistent place
+                    Header.DXGIFormat = (int)Headerizer.textureFormatMap[Format];
 
                     if (platform == TPFPlatform.Xbox360)
                     {
@@ -254,17 +331,18 @@ namespace SoulsFormats
                         if (flag2 != 0)
                             Header.Unk2 = br.AssertInt32([0, 0x69E0, 0xAAE4]);
                     }
-                    else if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
+                    else if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone || platform == TPFPlatform.PS5)
                     {
-                        Header.TextureCount = br.AssertInt32([1, 6]);
-                        Header.Unk2 = br.AssertInt32([0xD, 0x8]);
+                        Header.TextureCount = br.ReadInt32();
+                        Header.Unk2 = br.AssertInt32([0, 0x9, 0xD]);
                     }
                 }
 
                 uint nameOffset = br.ReadUInt32();
+                //Formerly 'Flags2', as seen in Yabber
                 bool hasFloatStruct = br.AssertInt32([0, 1]) == 1;
 
-                if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
+                if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone || platform == TPFPlatform.PS5)
                     Header.DXGIFormat = br.ReadInt32();
 
                 if (hasFloatStruct)
@@ -277,7 +355,15 @@ namespace SoulsFormats
                     if (type != DCX.Type.DCP_EDGE)
                         throw new NotImplementedException($"TPF compression is expected to be DCP_EDGE, but it was {type}");
                 }
-
+                //Cubemap fix
+                //Check if this is a DX10 FourCC, check if it's a cubemap
+                //FromSoft erroneously sets the image count for DX10 cubemaps to 6, which causes editors to think there's
+                //an array of cubemaps instead of just 6 images and break. 
+                /*if (platform == TPFPlatform.PC && Bytes.Length > 0x8C && Bytes[0x56] == 0x31 && Bytes[0x57] == 0x30 && Bytes[0x54] == 0x44 && Bytes[0x55] == 0x58
+                    && Bytes[0x88] == (int)DDS.RESOURCE_MISC.TEXTURECUBE && Bytes[0x8C] == 0x6)
+                {
+                    Bytes[0x8C] = 0x1;
+                }*/
                 if (encoding == 1)
                     Name = br.GetUTF16(nameOffset);
                 else if (encoding == 0 || encoding == 2)
@@ -321,7 +407,7 @@ namespace SoulsFormats
                         if (flag2 != 0)
                             bw.WriteInt32(Header.Unk2);
                     }
-                    else if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
+                    else if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone || platform == TPFPlatform.PS5)
                     {
                         bw.WriteInt32(Header.TextureCount);
                         bw.WriteInt32(Header.Unk2);
@@ -329,6 +415,7 @@ namespace SoulsFormats
                 }
 
                 bw.ReserveUInt32($"FileName{index}");
+                //Formerly 'Flags2', as seen in Yabber
                 bw.WriteInt32(FloatStruct == null ? 0 : 1);
 
                 if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone)
@@ -347,7 +434,8 @@ namespace SoulsFormats
                     bw.WriteShiftJIS(Name, true);
             }
 
-            internal void WriteData(BinaryWriterEx bw, int index)
+            //Returns the final size of the TPF texture that was written, e.g. compressed size if compressed, uncompressed otherwise
+            internal int WriteData(BinaryWriterEx bw, int index)
             {
                 bw.FillUInt32($"FileData{index}", (uint)bw.Position);
 
@@ -357,6 +445,8 @@ namespace SoulsFormats
 
                 bw.FillInt32($"FileSize{index}", bytes.Length);
                 bw.WriteBytes(bytes.Span);
+
+                return bytes.Length;
             }
 
             /// <summary>
@@ -419,7 +509,11 @@ namespace SoulsFormats
             /// Headerless DDS with DX10 metadata.
             /// </summary>
             Xbone = 5,
-            PS5 = 6,
+
+            /// <summary>
+            /// Headerless DDS with DX10 metadata.
+            /// </summary>
+            PS5 = 8,
         }
 
         /// <summary>
@@ -443,7 +537,7 @@ namespace SoulsFormats
             Volume = 2,
 
             /// <summary>
-            /// Unknown
+            /// Multiple standard Textures in sequence
             /// </summary>
             TextureArray = 3,
         }

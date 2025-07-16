@@ -1,13 +1,7 @@
-﻿using SoulsFormats;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static SoulsFormats.FLVER;
 
-// FLVER implementation for Model Editor usage
-// Credit to The12thAvenger
 namespace SoulsFormats
 {
     public partial class FLVER2
@@ -18,16 +12,16 @@ namespace SoulsFormats
         public class BufferLayout : List<FLVER.LayoutMember>
         {
             /// <summary>
-            /// The total size of all ValueTypes in this layout.
+            /// The total size of all ValueTypes in this layout. Accounts for Speedtree members which do NOT add to this size.
             /// </summary>
-            public int Size => this.Sum(member => member.Size);
+            public int Size => this.Sum(member => member.SpecialModifier == -32768 ? 0 : member.Size);
 
             /// <summary>
             /// Creates a new empty BufferLayout.
             /// </summary>
             public BufferLayout() : base() { }
 
-            internal BufferLayout(BinaryReaderEx br) : base()
+            internal BufferLayout(BinaryReaderEx br, bool isSpeedTree) : base()
             {
                 int memberCount = br.ReadInt32();
                 br.AssertInt32(0);
@@ -40,7 +34,7 @@ namespace SoulsFormats
                     Capacity = memberCount;
                     for (int i = 0; i < memberCount; i++)
                     {
-                        var member = new FLVER.LayoutMember(br, structOffset);
+                        var member = new FLVER.LayoutMember(br, structOffset, isSpeedTree);
                         structOffset += member.Size;
                         Add(member);
                     }
@@ -56,19 +50,15 @@ namespace SoulsFormats
                 bw.ReserveInt32($"VertexStructLayout{index}");
             }
 
-            internal void WriteMembers(BinaryWriterEx bw, int index)
+            internal void WriteMembers(BinaryWriterEx bw, int index, bool isSpeedTree)
             {
                 bw.FillInt32($"VertexStructLayout{index}", (int)bw.Position);
                 int structOffset = 0;
                 foreach (FLVER.LayoutMember member in this)
                 {
-                    member.Write(bw, structOffset);
+                    member.Write(bw, structOffset, isSpeedTree);
                     structOffset += member.Size;
                 }
-            }
-            public BufferLayout Clone()
-            {
-                return (BufferLayout)MemberwiseClone();
             }
 
             /// <summary>
@@ -96,7 +86,7 @@ namespace SoulsFormats
                     return false;
                 }
 
-                LayoutMember tangentLayout = new LayoutMember(LayoutType.Byte4C, LayoutSemantic.Tangent, 0, 0);
+                FLVER.LayoutMember tangentLayout = new FLVER.LayoutMember(FLVER.LayoutType.UByte4Norm, FLVER.LayoutSemantic.Tangent, 0, 0);
                 Insert(normalIndex + 1, tangentLayout);
                 return true;
             }

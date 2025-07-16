@@ -1,11 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-// FLVER implementation for Model Editor usage
-// Credit to The12thAvenger
 namespace SoulsFormats
 {
     public partial class FLVER
@@ -54,6 +48,15 @@ namespace SoulsFormats
                             throw new IndexOutOfRangeException($"Index ({i}) was out of range. Must be non-negative and less than 4.");
                     }
                 }
+            }
+
+            /// <summary>
+            /// Returns a string representation of the <see cref="VertexBoneIndices"/>.
+            /// </summary>
+            /// <returns>A string representation of the <see cref="VertexBoneIndices"/>.</returns>
+            public override string ToString()
+            {
+                return $"<{A}, {B}, {C}, {D}>";
             }
         }
     }
