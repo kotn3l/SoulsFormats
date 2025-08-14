@@ -1584,7 +1584,12 @@ namespace SoulsFormats
                 /// <summary>
                 /// Unknown.
                 /// </summary>
-                public int UnkT34 { get; set; }
+                public int UnkSpEffectSetParamID { get; set; }
+
+                /// <summary>
+                /// Unknown.
+                /// </summary>
+                public int CondemnedSpEffectSetParamID { get; set; }
 
                 /// <summary>
                 /// Unknown.
@@ -1638,7 +1643,6 @@ namespace SoulsFormats
                 private int UnkT00 { get; set; }
                 private int UnkT04 { get; set; }
                 private short UnkT1E { get; set; }
-                private int UnkT30 { get; set; }
 
                 private protected override void ReadTypeData(BinaryReaderEx br)
                 {
@@ -1657,8 +1661,8 @@ namespace SoulsFormats
                     UnkT24 = br.ReadInt32();
                     UnkT28 = br.ReadInt32();
                     ChrActivateCondParamID = br.ReadInt32();
-                    UnkT30 = br.ReadInt32();
-                    UnkT34 = br.ReadInt32();
+                    UnkSpEffectSetParamID = br.ReadInt32();
+                    CondemnedSpEffectSetParamID = br.ReadInt32();
                     BackupEventAnimID = br.ReadInt32();
                     UnkT3C = br.ReadInt32();
                     SpEffectSetParamID = br.ReadInt32s(4);
@@ -1700,8 +1704,8 @@ namespace SoulsFormats
                     bw.WriteInt32(UnkT24);
                     bw.WriteInt32(UnkT28);
                     bw.WriteInt32(ChrActivateCondParamID);
-                    bw.WriteInt32(UnkT30);
-                    bw.WriteInt32(UnkT34);
+                    bw.WriteInt32(UnkSpEffectSetParamID);
+                    bw.WriteInt32(CondemnedSpEffectSetParamID);
                     bw.WriteInt32(BackupEventAnimID);
                     bw.WriteInt32(UnkT3C);
                     bw.WriteInt32s(SpEffectSetParamID);
@@ -2475,9 +2479,9 @@ namespace SoulsFormats
                 public int UnkT30 { get; set; }
 
                 /// <summary>
-                /// Unknown.
+                /// The <c>ItemLotParam_map</c> row ID that this asset spawns upon interaction.
                 /// </summary>
-                public int UnkT34 { get; set; }
+                public int ItemLotParamMapID { get; set; }
 
                 /// <summary>
                 /// Unknown.
@@ -3062,7 +3066,7 @@ namespace SoulsFormats
                     UnkT28 = br.ReadInt32();
                     br.AssertInt32(0);
                     UnkT30 = br.ReadInt32();
-                    UnkT34 = br.ReadInt32();
+                    ItemLotParamMapID = br.ReadInt32();
                     PartIndices = br.ReadInt32s(6);
                     UnkT50 = br.ReadBoolean();
                     UnkT51 = br.ReadByte();
@@ -3115,7 +3119,7 @@ namespace SoulsFormats
                     bw.WriteInt32(UnkT28);
                     bw.WriteInt32(0);
                     bw.WriteInt32(UnkT30);
-                    bw.WriteInt32(UnkT34);
+                    bw.WriteInt32(ItemLotParamMapID);
                     bw.WriteInt32s(PartIndices);
                     bw.WriteBoolean(UnkT50);
                     bw.WriteByte(UnkT51);
