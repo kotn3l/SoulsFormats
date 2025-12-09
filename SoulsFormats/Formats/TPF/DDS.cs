@@ -124,6 +124,84 @@ namespace SoulsFormats
         }
 
         /// <summary>
+        /// Rearranges a vertically stacked 16x16 LUT sequence (16x256)
+        /// into a horizontal layout (256x16). Works only for uncompressed pixel data.
+        /// </summary>
+        public byte[] RearrangeVerticalLUTsToHorizontal(Span<byte> allData, int lutSize = 16, int numLuts = 16)
+        {
+            int bytesPerPixel = GetBytesPerPixel();
+            if (bytesPerPixel == 0)
+                throw new NotSupportedException("Unsupported or compressed DDS format.");
+
+            int srcWidth = lutSize;           // 16
+            int srcHeight = lutSize * numLuts; // 256
+            int dstWidth = lutSize * numLuts; // 256
+            int dstHeight = lutSize;          // 16
+
+            var pixelData = allData.Slice(DataOffset, allData.Length-DataOffset);
+            byte[] dstData = new byte[pixelData.Length];
+
+            for (int lutIndex = 0; lutIndex < numLuts; lutIndex++)
+            {
+                int srcYOffset = lutIndex * lutSize;
+
+                for (int y = 0; y < lutSize; y++)
+                {
+                    for (int x = 0; x < lutSize; x++)
+                    {
+                        int srcY = srcYOffset + y;
+                        int srcIndex = ((srcY * srcWidth) + x) * bytesPerPixel;
+
+                        int dstX = lutIndex * lutSize + x;
+                        int dstIndex = ((y * dstWidth) + dstX) * bytesPerPixel;
+
+                        pixelData.Slice(srcIndex, bytesPerPixel)
+                                 .CopyTo(dstData.AsSpan(dstIndex));
+                    }
+                }
+            }
+
+            // Update DDS header to match new layout
+            dwWidth = dstWidth;
+            dwHeight = dstHeight;
+            dwPitchOrLinearSize = dstWidth * bytesPerPixel;
+
+            return dstData;
+        }
+
+        private int GetBytesPerPixel()
+        {
+            // Case 1: DX10 header present
+            if (ddspf.dwFourCC == "DX10")
+            {
+                switch (header10.dxgiFormat)
+                {
+                    case DXGI_FORMAT.R8G8B8A8_UNORM:
+                    case DXGI_FORMAT.R8G8B8A8_UINT:
+                    case DXGI_FORMAT.R8G8B8A8_SNORM:
+                    case DXGI_FORMAT.R8G8B8A8_SINT:
+                        return 4;
+
+                    case DXGI_FORMAT.R16G16B16A16_FLOAT:
+                    case DXGI_FORMAT.R16G16B16A16_UNORM:
+                        return 8;
+
+                    case DXGI_FORMAT.R32G32B32A32_FLOAT:
+                        return 16;
+
+                    default:
+                        return 0; // unsupported or compressed
+                }
+            }
+
+            // Case 2: Legacy DDS (uncompressed)
+            if ((ddspf.dwFlags & DDPF.RGB) != 0)
+                return ddspf.dwRGBBitCount / 8;
+
+            return 0;
+        }
+
+        /// <summary>
         /// Write a DDS file from this header object and given pixel data.
         /// </summary>
         public byte[] Write(Span<byte> pixelData)

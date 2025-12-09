@@ -107,13 +107,14 @@ namespace SoulsFormats
                 {
                     Stream = br.ReadInt16();
                     SpecialModifier = br.ReadInt16();
+                    _ = br.ReadInt32();
                 }
                 else
                 {
                     Stream = br.ReadInt32();
+                    br.AssertInt32(structOffset);
                 }
 
-                br.AssertInt32(structOffset);
                 Type = br.ReadEnum32<LayoutType>();
                 Semantic = br.ReadEnum32<LayoutSemantic>();
                 Index = br.ReadInt32();
