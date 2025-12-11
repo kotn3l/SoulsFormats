@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace SoulsFormats
@@ -729,6 +730,28 @@ namespace SoulsFormats
         #endregion
 
         #region Other
+
+        public void WriteMapIDBytes(sbyte[] sbytes)
+        {
+            if (sbytes == null) throw new ArgumentNullException(nameof(sbytes));
+
+            var tmp = (sbyte[])sbytes.Clone();
+
+            if (tmp.Length > 0)
+            {
+                int last = tmp[^1];
+
+                if (last >= 0 && last <= 99)
+                {
+                    byte bcd = (byte)(((last / 10) << 4) | (last % 10));
+                    tmp[^1] = unchecked((sbyte)bcd);
+                }
+            }
+
+            Array.Reverse(tmp);
+            bw.Write(MemoryMarshal.AsBytes(tmp.AsSpan()));
+        }
+
         /// <summary>
         /// Writes a vector of two four-byte floating point numbers.
         /// </summary>

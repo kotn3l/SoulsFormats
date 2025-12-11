@@ -6,7 +6,7 @@ namespace SoulsFormats
     /// <summary>
     /// A generic file in a BND3, BND4, BXF3, or BXF4 container.
     /// </summary>
-    public class BinderFile
+    public class BinderFile : IDisposable
     {
         /// <summary>
         /// Flags indicating compression, and possibly other things.
@@ -85,6 +85,11 @@ namespace SoulsFormats
         public override int GetHashCode()
         {
             return HashCode.Combine(Flags, ID, Name, Bytes);
+        }
+
+        public void Dispose()
+        {
+            Bytes = null;
         }
     }
 }

@@ -86,6 +86,12 @@ namespace SoulsFormats
             return file;
         }
 
+        public static Memory<byte> Decompress(Memory<byte> bytes)
+        {
+            BinaryReaderEx br = new BinaryReaderEx(false, bytes);
+            return SFUtil.GetDecompressed(br, out DCX.Type compression);
+        }
+
         /// <summary>
         /// Loads a file from the specified path, automatically decompressing it if necessary.
         /// </summary>

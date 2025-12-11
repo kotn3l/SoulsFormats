@@ -221,6 +221,20 @@ namespace SoulsFormats
             }
         }
 
+        public static Memory<byte> GetDecompressed(BinaryReaderEx br, out DCX.Type compression)
+        {
+            if (DCX.Is(br))
+            {
+                Memory<byte> bytes = DCX.Decompress(br, out compression);
+                return bytes;
+            }
+            else
+            {
+                compression = DCX.Type.None;
+                return Memory<byte>.Empty;
+            }
+        }
+
         /// <summary>
         /// FromSoft's basic filename hashing algorithm, used in some BND and BXF formats.
         /// </summary>

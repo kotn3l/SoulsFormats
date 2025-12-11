@@ -77,6 +77,25 @@ namespace SoulsFormats
             return buffer;
         }
 
+        /// <summary>
+        /// Reads length sbytes, makes the last returned element a BCD-decoded value if valid.
+        /// </summary>
+        public sbyte[] ReadMapIDBytes(int length)
+        {
+            sbyte[] sbytes = ReadSBytes(length);
+            if (length > 0)
+            {
+                byte b0 = unchecked((byte)sbytes[0]);
+                int hi = (b0 >> 4) & 0xF;
+                int lo = b0 & 0xF;
+                if (hi <= 9 && lo <= 9)
+                    sbytes[0] = (sbyte)(hi * 10 + lo);
+            }
+
+            Array.Reverse(sbytes);
+            return sbytes;
+        }
+
         public unsafe Span<T> ReadSpanView<T>(int count) where T : unmanaged
         {
             var ret = _memory.Span.Slice((int)Position, sizeof(T) * count).Cast<byte, T>();

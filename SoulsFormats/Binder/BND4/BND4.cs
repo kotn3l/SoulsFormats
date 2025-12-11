@@ -233,6 +233,12 @@ namespace SoulsFormats
         {
             _mappedMemory?.Dispose();
             _mappedMemory = null;
+            foreach (var item in Files)
+            {
+                item.Dispose();
+            }
+            FilesByExtension = null;
+            Files = null;
         }
 
         public override bool Equals(object obj)

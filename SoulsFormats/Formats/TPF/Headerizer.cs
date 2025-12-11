@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using static SoulsFormats.DDS;
 using static SoulsFormats.TPF;
 
@@ -31,6 +30,7 @@ namespace SoulsFormats
          23 - DXT5
          24 - BC4
          25 - DXT1
+         26 - 8-bit pallette indices per pixel, swizzled on PS3
          33 - DXT5
         100 - BC6H_UF16
         102 - BC7_UNORM
@@ -64,6 +64,7 @@ namespace SoulsFormats
             [23] = DXGI_FORMAT.BC3_UNORM,
             [24] = DXGI_FORMAT.BC4_UNORM,
             [25] = DXGI_FORMAT.BC1_UNORM,
+            [26] = DXGI_FORMAT.A8_UNORM,
             [29] = DXGI_FORMAT.BC1_UNORM,
             [33] = DXGI_FORMAT.BC3_UNORM,
             [100] = DXGI_FORMAT.BC6H_UF16,
@@ -120,6 +121,7 @@ namespace SoulsFormats
             [10] = 4,
             [16] = 1,
             [22] = 8,
+            [26] = 1,
             [105] = 4,
         };
 
@@ -145,52 +147,45 @@ namespace SoulsFormats
             [110] = "DXT5",
         };
 
-
         /// <summary>
         /// DX10+ dds pixel formats from the Texture.Format field
         /// </summary>
         private static byte[] DX10Formats = { 6, 100, 102, 106, 107, 112, 113, 115 };
 
-        public static DDS.DXGI_FORMAT GetDXGIFormatFromFourCC(string str)
+        /// <summary>
+        /// *Deprecated handling* 
+        /// Please use Headerize overload with extension string
+        /// </summary>
+        public static Memory<byte> Headerize(Texture texture)
         {
-            switch (str)
+            var headerizedBytes = Headerize(texture, out string extension);
+            if(extension != ".dds")
             {
-                case "DXT1":
-                    return DDS.DXGI_FORMAT.BC1_UNORM_SRGB;
-                case "DXT3":
-                    return DDS.DXGI_FORMAT.BC2_UNORM_SRGB;
-                case "DXT5":
-                    return DDS.DXGI_FORMAT.BC3_UNORM_SRGB;
-                case "ATI1":
-                case "BC4U":
-                    return DDS.DXGI_FORMAT.BC4_UNORM; // Monogame workaround :fatcat:
-                case "ATI2":
-                    return DDS.DXGI_FORMAT.BC5_UNORM;
-                // From wtf
-                case "q\0\0\0":
-                    return DDS.DXGI_FORMAT.R16G16B16A16_UNORM;
-                case "\0\0\0\0":
-                    return DDS.DXGI_FORMAT.R16G16B16A16_UNORM;
-                default:
-                    throw new Exception($"Unknown DDS Type: {str}");
+                throw new Exception($"File is type {extension}, please retrieve extension string from the newer method!");
             }
+
+            return headerizedBytes;
         }
 
         /// <summary>
         /// By default, we'll assume no swizzling, PC type. Bear in mind Demon's Souls and Dark Souls 1 do NOT use PS3 swizzling and should be assigned 'PC'!
         /// </summary>
-        public static Memory<byte> Headerize(Texture texture)
+        public static Memory<byte> Headerize(Texture texture, out string extension)
         {
-            if (SFEncoding.ASCII.GetString(texture.Bytes.Span[..4].ToArray(), 0, 4) == "DDS ")
-            {
-                var d = new DDS(texture.Bytes);
-                texture.Header = new TPF.TexHeader();
-                texture.Header.Width = (short)d.dwWidth;
-                texture.Header.Height = (short)d.dwHeight;
-                texture.Header.DXGIFormat = d.header10 == null ? (int)GetDXGIFormatFromFourCC(d.ddspf.dwFourCC) : (int)d.header10.dxgiFormat;
-                //texture.Header.
+            extension = ".dds";
 
+            var potentialMagic = SFEncoding.ASCII.GetString(texture.Bytes.Span[..4]);
+            if (potentialMagic == "DDS ")
                 return texture.Bytes;
+            else if (potentialMagic == "GNF ")
+            {
+                extension = ".gnf";
+                return texture.Bytes;
+            }
+
+            if (texture.Header.DXGIFormat == (int)DXGI_FORMAT.UNKNOWN)
+            {
+                throw new InvalidOperationException($"Cannot headerize texture with unknown {nameof(DXGI_FORMAT)}.");
             }
 
             var dds = new DDS();
@@ -328,7 +323,7 @@ namespace SoulsFormats
                 if (type == TPF.TexType.Cubemap)
                     dds.header10.miscFlag = RESOURCE_MISC.TEXTURECUBE;
             }
-            var images = RebuildPixelData(texture.Bytes, (DXGI_FORMAT)texture.Header.DXGIFormat, width, height, depth, mipCount, type, texture.Platform);
+            var images = RebuildPixelData(texture.Bytes, (DXGI_FORMAT)texture.Header.DXGIFormat, width, height, depth, mipCount, type, texture.Platform, texture.Format);
 
             //Failsafe for if whatever reason we don't read all of the mipmaps
             if (images.Count > 0)
@@ -337,13 +332,13 @@ namespace SoulsFormats
             }
 
             //Bandaid fix for the moment for PS5 textures that somehow don't have enough data
-            /*if (platform == TPFPlatform.PS5)
+            if (texture.Platform == TPFPlatform.PS5)
             {
                 List<byte> outBytes = new List<byte>();
                 outBytes.AddRange(dds.Write(Image.Write(images)));
                 outBytes.AddRange(new byte[0x100]);
                 return outBytes.ToArray();
-            }*/
+            }
             return dds.Write(Image.Write(images));
         }
 
@@ -352,9 +347,9 @@ namespace SoulsFormats
             return (int)Math.Ceiling(Math.Log(Math.Max(width, height), 2)) + 1;
         }
 
-        private static List<Image> RebuildPixelData(Memory<byte> bytes, DXGI_FORMAT dxgiFormat, short width, short height, int depth, int mipCount, TPF.TexType type, TPFPlatform platform)
+        private static List<Image> RebuildPixelData(Memory<byte> bytes, DXGI_FORMAT dxgiFormat, short width, short height, int depth, int mipCount, TPF.TexType type, TPFPlatform platform, byte format)
         {
-            List<Image> images = ReadImages(platform, bytes, width, height, depth, mipCount, dxgiFormat, type);
+            List<Image> images = ReadImages(platform, bytes, width, height, depth, mipCount, dxgiFormat, type, format);
 
             return images;
         }
@@ -364,7 +359,7 @@ namespace SoulsFormats
             return Math.Max((int)Math.Ceiling(value / (float)pad) * pad, pad);
         }
 
-        private static List<Image> ReadImages(TPFPlatform platform, Memory<byte> bytes, int width, int height, int depth, int mipCount, DXGI_FORMAT dxgiFormat, TPF.TexType type)
+        private static List<Image> ReadImages(TPFPlatform platform, Memory<byte> bytes, int width, int height, int depth, int mipCount, DXGI_FORMAT dxgiFormat, TPF.TexType type, byte format)
         {
             switch (platform)
             {
@@ -373,7 +368,7 @@ namespace SoulsFormats
                 case TPFPlatform.Xbone:
                     throw new NotImplementedException();
                 case TPFPlatform.PS3:
-                    return ReadPS3Images(new BinaryReaderEx(false, bytes), width, height, depth, mipCount, dxgiFormat);
+                    return ReadPS3Images(new BinaryReaderEx(false, bytes), width, height, depth, mipCount, dxgiFormat, format);
                 case TPFPlatform.PS4:
                     return ReadPS4Images(new BinaryReaderEx(false, bytes), width, height, depth, mipCount, dxgiFormat, type);
                 case TPFPlatform.PS5:
@@ -381,7 +376,7 @@ namespace SoulsFormats
                 case TPFPlatform.PC:
                 default:
                     //Similar to original SF behavior, probably not necessary.
-                    return ReadPS3Images(new BinaryReaderEx(false, bytes), width, height, depth, mipCount, dxgiFormat);
+                    return ReadPS3Images(new BinaryReaderEx(false, bytes), width, height, depth, mipCount, dxgiFormat, format);
             }
         }
 
@@ -418,14 +413,22 @@ namespace SoulsFormats
                     image.subImages.Add(mip);
 
                     //Skip all but the first mip unless someone wants to finish it offer more properly.
-                    break;
+                    //break;
                 }
                 images.Add(image);
             }
             return images;
         }
+        /*
+        /// <summary>
+        /// Based on https://github.com/xenia-canary/xenia-canary/blob/15008ccecc495fb52d6c66cea0d48b71e19032c1/src/xenia/gpu/texture_util.cc#L108
+        /// </summary>
+        private static bool GetPackedMipOffset(int width, int height, int depth, )
+        {
 
-        private static List<Image> ReadPS3Images(BinaryReaderEx br, int finalWidth, int finalHeight, int depth, int mipCount, DXGI_FORMAT dxgiFormat)
+        }*/
+
+        private static List<Image> ReadPS3Images(BinaryReaderEx br, int finalWidth, int finalHeight, int depth, int mipCount, DXGI_FORMAT dxgiFormat, byte format)
         {
             var pixelFormat = (DrSwizzler.DDS.DXEnums.DXGIFormat)dxgiFormat;
             DrSwizzler.Util.GetsourceBytesPerPixelSetAndPixelSize(pixelFormat, out int sourceBytesPerPixelSet, out int pixelBlockSize, out int formatBpp);
@@ -448,7 +451,9 @@ namespace SoulsFormats
                     }
 
                     byte[] mip = br.ReadBytes((int)calculatedBufferLength);
-                    if (dxgiFormat == DXGI_FORMAT.R8G8B8A8_UNORM)
+                    if (dxgiFormat == DXGI_FORMAT.R8G8B8A8_UNORM ||
+                        format == 9 ||
+                        format == 26)
                     {
                         mip = DrSwizzler.Deswizzler.PS3Deswizzle(mip, w, h, pixelFormat);
                     }

@@ -46,11 +46,6 @@ namespace SoulsFormats
             /// <summary>
             /// Models for assets.
             /// </summary>
-            public List<Model.Asset> Assets { get; set; }
-
-            /// <summary>
-            /// Models for assets.
-            /// </summary>
             public List<Model.UniqueCharacter> UniqueCharacters { get; set; }
 
             /// <summary>
@@ -59,17 +54,22 @@ namespace SoulsFormats
             public List<Model.UniqueAsset> UniqueAssets { get; set; }
 
             /// <summary>
+            /// Models for assets.
+            /// </summary>
+            public List<Model.Asset> Assets { get; set; }
+
+            /// <summary>
             /// Creates an empty ModelParam with the default version.
             /// </summary>
-            public ModelParam() : base(73, "MODEL_PARAM_ST")
+            public ModelParam() : base(78, "MODEL_PARAM_ST")
             {
                 MapPieces = new List<Model.MapPiece>();
                 Enemies = new List<Model.Enemy>();
                 Players = new List<Model.Player>();
                 Collisions = new List<Model.Collision>();
-                Assets = new List<Model.Asset>();
                 UniqueCharacters = new List<Model.UniqueCharacter>();
                 UniqueAssets = new List<Model.UniqueAsset>();
+                Assets = new List<Model.Asset>();
             }
 
             /// <summary>
@@ -83,9 +83,9 @@ namespace SoulsFormats
                     case Model.Enemy m: Enemies.Add(m); break;
                     case Model.Player m: Players.Add(m); break;
                     case Model.Collision m: Collisions.Add(m); break;
-                    case Model.Asset m: Assets.Add(m); break;
                     case Model.UniqueCharacter m: UniqueCharacters.Add(m); break;
                     case Model.UniqueAsset m: UniqueAssets.Add(m); break;
+                    case Model.Asset m: Assets.Add(m); break;
 
                     default:
                         throw new ArgumentException($"Unrecognized type {model.GetType()}.", nameof(model));
@@ -100,11 +100,11 @@ namespace SoulsFormats
             public override List<Model> GetEntries()
             {
                 return SFUtil.ConcatAll<Model>(
-                    MapPieces, Enemies, Players, Collisions, Assets, UniqueCharacters, UniqueAssets);
+                    MapPieces, Enemies, Players, Collisions, UniqueCharacters, UniqueAssets, Assets);
             }
             IReadOnlyList<IMsbModel> IMsbParam<IMsbModel>.GetEntries() => GetEntries();
 
-            internal override Model ReadEntry(BinaryReaderEx br)
+            internal override Model ReadEntry(BinaryReaderEx br, int version)
             {
                 ModelType type = br.GetEnum32<ModelType>(br.Position + 8);
                 switch (type)
@@ -121,14 +121,14 @@ namespace SoulsFormats
                     case ModelType.Collision:
                         return Collisions.EchoAdd(new Model.Collision(br));
 
-                    case ModelType.Asset:
-                        return Assets.EchoAdd(new Model.Asset(br));
-
                     case ModelType.DummyEnemy:
                         return UniqueCharacters.EchoAdd(new Model.UniqueCharacter(br));
 
                     case ModelType.DummyAsset:
                         return UniqueAssets.EchoAdd(new Model.UniqueAsset(br));
+
+                    case ModelType.Asset:
+                        return Assets.EchoAdd(new Model.Asset(br));
 
                     default:
                         throw new NotImplementedException($"Unimplemented model type: {type}");
@@ -182,12 +182,16 @@ namespace SoulsFormats
                 Unk1C = br.ReadInt32();
                 long typeDataOffset = br.ReadInt64();
 
-                if (nameOffset == 0)
-                    throw new InvalidDataException($"{nameof(nameOffset)} must not be 0 in type {GetType()}.");
-                if (sibOffset == 0)
-                    throw new InvalidDataException($"{nameof(sibOffset)} must not be 0 in type {GetType()}.");
-                if (HasTypeData ^ typeDataOffset != 0)
-                    throw new InvalidDataException($"Unexpected {nameof(typeDataOffset)} 0x{typeDataOffset:X} in type {GetType()}.");
+
+                if (!BinaryReaderEx.IgnoreAsserts)
+                {
+                    if (nameOffset == 0)
+                        throw new InvalidDataException($"{nameof(nameOffset)} must not be 0 in type {GetType()}.");
+                    if (sibOffset == 0)
+                        throw new InvalidDataException($"{nameof(sibOffset)} must not be 0 in type {GetType()}.");
+                    if (HasTypeData ^ typeDataOffset != 0)
+                        throw new InvalidDataException($"Unexpected {nameof(typeDataOffset)} 0x{typeDataOffset:X} in type {GetType()}.");
+                }
 
                 br.Position = start + nameOffset;
                 Name = br.ReadUTF16();
@@ -263,22 +267,6 @@ namespace SoulsFormats
                 public MapPiece() : base("mXXXXXX") { }
 
                 internal MapPiece(BinaryReaderEx br) : base(br) { }
-            }
-
-            /// <summary>
-            /// A model for a dynamic prop. ER successor to obj
-            /// </summary>
-            public class Asset : Model
-            {
-                private protected override ModelType Type => ModelType.Asset;
-                private protected override bool HasTypeData => false;
-
-                /// <summary>
-                /// Creates an Object with default values.
-                /// </summary>
-                public Asset() : base("AEGxxx_xxx") { }
-
-                internal Asset(BinaryReaderEx br) : base(br) { }
             }
 
             /// <summary>
@@ -359,6 +347,22 @@ namespace SoulsFormats
                 public UniqueAsset() : base("AEGxxx_xxx") { }
 
                 internal UniqueAsset(BinaryReaderEx br) : base(br) { }
+            }
+
+            /// <summary>
+            /// A model for a dynamic prop. ER successor to obj
+            /// </summary>
+            public class Asset : Model
+            {
+                private protected override ModelType Type => ModelType.Asset;
+                private protected override bool HasTypeData => false;
+
+                /// <summary>
+                /// Creates an Object with default values.
+                /// </summary>
+                public Asset() : base("AEGxxx_xxx") { }
+
+                internal Asset(BinaryReaderEx br) : base(br) { }
             }
         }
     }

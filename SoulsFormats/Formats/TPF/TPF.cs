@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -113,6 +113,9 @@ namespace SoulsFormats
             {
                 bw.Pad(0x100);
                 texturePaddingSize = 0x80;
+            } else if (Platform == TPFPlatform.PS4)
+            {
+                bw.Pad(0x10);
             }
 
             long dataStart = bw.Position;
@@ -143,7 +146,7 @@ namespace SoulsFormats
         /// </summary>
         public IEnumerator<Texture> GetEnumerator() => Textures.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
+        
         public override bool Equals(object obj)
         {
             //bool b = obj is TPF tPF;
@@ -235,7 +238,7 @@ namespace SoulsFormats
 
             /// <summary>
             /// Create a new Texture with the specified information; Cubemap and Mipmaps are determined based on bytes.
-            /// We assume that the input texture is a standard pc .dds file
+            /// We assume that the input texture is a standard pc .dds file or a Dark Souls Remastered PS4 .gnf
             /// </summary>
             public Texture(string name, byte format, byte flags1, byte[] bytes, TPFPlatform platform)
             {
@@ -255,7 +258,8 @@ namespace SoulsFormats
                 Mipmaps = (byte)dds.dwMipMapCount;
                 Platform = platform;
 
-                if (Platform == TPFPlatform.PC)
+                var potentialMagic = SFEncoding.ASCII.GetString(bytes, 0, 4);
+                if (Platform == TPFPlatform.PC || potentialMagic == "GNF ")
                 {
                     Bytes = bytes;
                     return;
@@ -319,7 +323,14 @@ namespace SoulsFormats
                     Header.Height = br.ReadInt16();
 
                     //Set it here for use later so we have it one consistent place
-                    Header.DXGIFormat = (int)Headerizer.textureFormatMap[Format];
+                    if (Headerizer.textureFormatMap.TryGetValue(Format, out DDS.DXGI_FORMAT dxgiFormat))
+                    {
+                        Header.DXGIFormat = (int)dxgiFormat;
+                    }
+                    else
+                    {
+                        Header.DXGIFormat = (int)DDS.DXGI_FORMAT.UNKNOWN;
+                    }
 
                     if (platform == TPFPlatform.Xbox360)
                     {
@@ -329,7 +340,7 @@ namespace SoulsFormats
                     {
                         Header.Unk1 = br.ReadInt32();
                         if (flag2 != 0)
-                            Header.Unk2 = br.AssertInt32([0, 0x69E0, 0xAAE4]);
+                            Header.Remap = br.ReadInt32();
                     }
                     else if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone || platform == TPFPlatform.PS5)
                     {
@@ -359,11 +370,11 @@ namespace SoulsFormats
                 //Check if this is a DX10 FourCC, check if it's a cubemap
                 //FromSoft erroneously sets the image count for DX10 cubemaps to 6, which causes editors to think there's
                 //an array of cubemaps instead of just 6 images and break. 
-                /*if (platform == TPFPlatform.PC && Bytes.Length > 0x8C && Bytes[0x56] == 0x31 && Bytes[0x57] == 0x30 && Bytes[0x54] == 0x44 && Bytes[0x55] == 0x58
-                    && Bytes[0x88] == (int)DDS.RESOURCE_MISC.TEXTURECUBE && Bytes[0x8C] == 0x6)
+                if (platform == TPFPlatform.PC && Bytes.Length > 0x8C && Bytes.Span[0x56] == 0x31 && Bytes.Span[0x57] == 0x30 && Bytes.Span[0x54] == 0x44 && Bytes.Span[0x55] == 0x58
+                    && Bytes.Span[0x88] == (int)DDS.RESOURCE_MISC.TEXTURECUBE && Bytes.Span[0x8C] == 0x6)
                 {
-                    Bytes[0x8C] = 0x1;
-                }*/
+                    Bytes.Span[0x8C] = 0x1;
+                }
                 if (encoding == 1)
                     Name = br.GetUTF16(nameOffset);
                 else if (encoding == 0 || encoding == 2)
@@ -405,7 +416,7 @@ namespace SoulsFormats
                     {
                         bw.WriteInt32(Header.Unk1);
                         if (flag2 != 0)
-                            bw.WriteInt32(Header.Unk2);
+                            bw.WriteInt32(Header.Remap);
                     }
                     else if (platform == TPFPlatform.PS4 || platform == TPFPlatform.Xbone || platform == TPFPlatform.PS5)
                     {
@@ -450,11 +461,20 @@ namespace SoulsFormats
             }
 
             /// <summary>
-            /// Attempt to create a full DDS file from headerless console textures. Very very very poor support at the moment.
+            /// *Deprecated, please use HeaderizeExt instead*
+            /// Attempt to create a full DDS file from headerless console textures.
             /// </summary>
             public Memory<byte> Headerize()
             {
                 return Headerizer.Headerize(this);
+            }
+
+            /// <summary>
+            /// Attempt to create a full DDS file from headerless console textures.
+            /// </summary>
+            public Memory<byte> HeaderizeExt(out string extension)
+            {
+                return Headerizer.Headerize(this, out extension);
             }
 
             /// <summary>
@@ -477,7 +497,7 @@ namespace SoulsFormats
             public override int GetHashCode()
             {
                 return HashCode.Combine(Name, Format, Type, Flags1, Header);
-            }
+        }
         }
 
         /// <summary>
@@ -568,9 +588,18 @@ namespace SoulsFormats
             public int Unk1 { get; set; }
 
             /// <summary>
-            /// Unknown; 0x0 or 0xAAE4 in DeS, 0xD in DS3.
+            /// Unknown; 0xD in DS3.
             /// </summary>
             public int Unk2 { get; set; }
+
+            /// <summary>
+            /// A value for remapping color channel order on PS3.<br/>
+            /// The first 16-bits appear to be seldom used; They represent XYXY or XXXY remapping for special texture formats.<br/>
+            /// The last 16-bits are split into two bits each.<br/>
+            /// The first 4 of these values determine whether to output 0 (0% color), output 1 (100% color), or remap the color using the last 4 values.<br/>
+            /// The last 4 of these values determine what channel to remap another channel to, based on ARGB ordering.
+            /// </summary>
+            public int Remap { get; set; }
 
             /// <summary>
             /// Microsoft DXGI_FORMAT.
