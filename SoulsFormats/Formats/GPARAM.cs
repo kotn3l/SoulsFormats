@@ -227,7 +227,7 @@ namespace SoulsFormats
               GPARAM.GparamVersion version,
               GPARAM.BaseOffsets baseOffsets)
             {
-                GPARAM.FieldType enum8 = br.GetEnum8<GPARAM.FieldType>(br.Position + 8L);
+                GPARAM.FieldType enum8;
                 if (version < GparamVersion.V6)
                 {
                     enum8 = br.GetEnum8<GPARAM.FieldType>(br.Position + 8L);
