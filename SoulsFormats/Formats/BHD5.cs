@@ -65,6 +65,7 @@ namespace SoulsFormats
             Format = game;
             Salt = "";
             Buckets = new List<Bucket>();
+            MasterBucket = new Bucket();
         }
 
         private BHD5(BinaryReaderEx br, Game game)
@@ -513,6 +514,8 @@ namespace SoulsFormats
             /// </summary>
             public byte[] Key { get; set; }
 
+            private readonly int _rangeCount;
+
             /// <summary>
             /// Encrypted sections of the file.
             /// </summary>
@@ -530,10 +533,17 @@ namespace SoulsFormats
             internal AesKey(BinaryReaderEx br)
             {
                 Key = br.ReadBytes(16);
-                int rangeCount = br.ReadInt32();
-                Ranges = new List<Range>(rangeCount);
-                for (int i = 0; i < rangeCount; i++)
-                    Ranges.Add(new Range(br));
+                _rangeCount = br.ReadInt32();
+                Ranges = new List<Range>();
+                for (int i = 0; i < _rangeCount; i++)
+                {
+                    var r = new Range(br);
+                    if (r.StartOffset > -1 && r.EndOffset > -1)
+                    {
+                        Ranges.Add(r);
+                    }
+                }
+                    
             }
 
             internal void Write(BinaryWriterEx bw)
@@ -542,9 +552,15 @@ namespace SoulsFormats
                     throw new InvalidDataException("AES key must be 16 bytes long.");
 
                 bw.WriteBytes(Key);
-                bw.WriteInt32(Ranges.Count);
+                bw.WriteInt32(_rangeCount);
                 foreach (Range range in Ranges)
                     range.Write(bw);
+
+                var dummy = new Range(-1, -1);
+                for (int i = Ranges.Count - 1; i < _rangeCount; i++)
+                {
+                    dummy.Write(bw);
+                }
             }
 
             /// <summary>
